@@ -1,0 +1,2958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Boxing Commission Ledger</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #0F1115;
+    --surface: #1B1F27;
+    --surface-2: #232833;
+    --text: #F4F5F7;
+    --text-dim: #9AA2B1;
+    --border: rgba(255,255,255,0.08);
+    --red: #FF4D5E;
+    --blue: #4FA8FF;
+    --gold: #FFC64B;
+    --green: #34D399;
+
+    /* aliases so the inline SVG boxer portrait (var(--ink) / var(--paper)) keeps working */
+    --ink: var(--text);
+    --paper: var(--surface);
+    --paper-dark: var(--surface-2);
+    --rule: var(--border);
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% -10%, rgba(255,77,94,0.14), transparent 42%),
+      radial-gradient(circle at 100% 10%, rgba(79,168,255,0.10), transparent 45%),
+      var(--bg);
+    font-family:'Inter', sans-serif;
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 60px;
+  }
+
+  .ledger{
+    width:100%;
+    max-width:480px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px;
+    box-shadow:0 24px 60px -24px rgba(0,0,0,0.65);
+    position:relative;
+    overflow:hidden;
+  }
+
+  .header{
+    padding:22px 24px 18px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(255,77,94,0.08), transparent);
+    position:relative;
+  }
+  .file-no{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .title{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:21px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    color:var(--text);
+    margin:5px 70px 12px 0;
+  }
+  .name-row{
+    font-family:'Inter', sans-serif;
+    font-size:15px;
+    font-weight:600;
+    display:flex;
+    gap:8px;
+    align-items:baseline;
+    flex-wrap:wrap;
+  }
+  .name-row input{
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--surface-2);
+    color:var(--text);
+    padding:7px 10px;
+    width:180px;
+  }
+  .name-row input:focus{
+    outline:none; border-color:var(--red);
+    box-shadow:0 0 0 3px rgba(255,77,94,0.15);
+  }
+  .meta-line{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.3px;
+    color:var(--text-dim);
+    margin-top:8px;
+  }
+
+  .seal{
+    position:absolute;
+    top:20px;
+    right:22px;
+    padding:6px 12px;
+    border-radius:20px;
+    background:linear-gradient(135deg, var(--red), #FF8A3D);
+    color:#fff;
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:10px;
+    letter-spacing:0.8px;
+    text-align:center;
+    line-height:1.25;
+    text-transform:uppercase;
+    box-shadow:0 6px 16px -4px rgba(255,77,94,0.55);
+    pointer-events:none;
+  }
+  .seal.champ{
+    background:linear-gradient(135deg, var(--gold), #FFE08A);
+    color:#1A1300;
+    box-shadow:0 6px 16px -4px rgba(255,198,75,0.55);
+  }
+
+  .stats{
+    padding:20px 24px;
+    border-bottom:1px solid var(--border);
+    font-family:'Inter', sans-serif;
+    font-size:12px;
+  }
+  .stat-line{
+    display:grid;
+    grid-template-columns:66px 1fr 34px;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .stat-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .bar-track{
+    height:8px;
+    border-radius:999px;
+    background:var(--surface-2);
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--text-dim), var(--text));
+    transition:width 0.35s ease;
+  }
+  #bar-health{ background:linear-gradient(90deg, #1FAE6E, var(--green)); }
+  #bar-power{  background:linear-gradient(90deg, #E23B4E, var(--red)); }
+  #bar-speed{  background:linear-gradient(90deg, #2E7FE0, var(--blue)); }
+  #bar-fame{   background:linear-gradient(90deg, #D99B1E, var(--gold)); }
+  #bar-health.low, #bar-power.low, #bar-speed.low, #bar-fame.low{ background:var(--red); }
+
+  .stat-val{
+    text-align:right;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:600;
+    color:var(--text);
+  }
+  .record-line, .money-line, .tier-line{
+    display:flex;
+    justify-content:space-between;
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    color:var(--text-dim);
+  }
+  .record-line span:last-child{ font-weight:700; color:var(--red); }
+  .tier-line span:last-child{ font-weight:700; color:var(--text); }
+  .tier-line span:last-child.is-champ{ color:var(--gold); }
+  .money-line span:last-child{ font-weight:700; color:var(--green); }
+
+  .notes{
+    padding:18px 24px 8px;
+    max-height:230px;
+    overflow-y:auto;
+    border-bottom:1px solid var(--border);
+    font-size:14px;
+    line-height:1.5;
+    color:var(--text);
+  }
+  .notes-title{
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:10px;
+  }
+  .entry{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+    margin-bottom:10px;
+  }
+  .entry .yr{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    color:var(--red);
+    background:rgba(255,77,94,0.12);
+    padding:2px 6px;
+    border-radius:6px;
+    margin-right:8px;
+  }
+  .entry .delta{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    display:block;
+    margin-top:5px;
+  }
+
+  .active-event{
+    padding:18px 24px;
+    border-bottom:1px solid var(--border);
+    min-height:64px;
+  }
+  .active-event .prompt{
+    font-weight:500;
+    color:var(--text);
+    margin-bottom:14px;
+    font-size:14px;
+  }
+  .choices{ display:flex; flex-direction:column; gap:10px; }
+  .choice-btn{
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    text-align:left;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px 14px;
+    cursor:pointer;
+    color:var(--text);
+    width:100%;
+    transition:transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  }
+  .choice-btn:hover{
+    border-color:var(--red);
+    background:rgba(255,77,94,0.08);
+    transform:translateY(-1px);
+  }
+  .choice-btn:active{
+    transform:scale(0.97);
+  }
+  .choice-btn.gold{
+    border-color:rgba(255,198,75,0.35);
+    background:rgba(255,198,75,0.06);
+  }
+  .choice-btn.gold:hover{
+    border-color:var(--gold);
+    background:rgba(255,198,75,0.12);
+  }
+  .choice-tag{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.2px;
+    color:var(--text-dim);
+    margin-top:5px;
+  }
+
+  .footer{
+    padding:24px 24px 30px;
+    display:flex;
+    justify-content:center;
+  }
+  .stamp-btn{
+    font-family:'Oswald', sans-serif;
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#fff;
+    background:linear-gradient(135deg, var(--red), #FF8A3D);
+    border:none;
+    border-radius:50%;
+    width:112px;
+    height:112px;
+    cursor:pointer;
+    box-shadow:0 14px 30px -8px rgba(255,77,94,0.55), 0 0 0 6px rgba(255,77,94,0.08);
+    transition:transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  }
+  .stamp-btn:hover{ transform:translateY(-2px); }
+  .stamp-btn:active{ transform:scale(0.94); }
+  .stamp-btn:disabled{ opacity:0.3; cursor:default; box-shadow:none; transform:none; }
+
+  .closed{
+    display:none;
+    padding:30px 24px 34px;
+    text-align:center;
+  }
+  .closed.show{ display:block; }
+  .closed-stamp{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:24px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#fff;
+    background:linear-gradient(135deg, var(--red), #FF8A3D);
+    display:inline-block;
+    padding:10px 26px;
+    border-radius:14px;
+    margin-bottom:18px;
+  }
+  .epitaph{
+    font-size:14px;
+    color:var(--text-dim);
+    line-height:1.6;
+    margin-bottom:20px;
+  }
+  .restart-btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.3px;
+    padding:12px 22px;
+    background:var(--text);
+    color:var(--bg);
+    border:none;
+    border-radius:999px;
+    cursor:pointer;
+    transition:transform 0.12s ease;
+  }
+  .restart-btn:hover{ transform:translateY(-1px); }
+
+  .hidden{ display:none !important; }
+
+  /* ---------- Character creation screen ---------- */
+  .field-row{ margin-bottom:18px; }
+  .field-row label{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.6px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:6px;
+  }
+  .field-row input[type="text"], .field-row select{
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    color:var(--text);
+    padding:10px 12px;
+  }
+  .field-row input[type="text"]:focus, .field-row select:focus{
+    outline:none; border-color:var(--red);
+    box-shadow:0 0 0 3px rgba(255,77,94,0.15);
+  }
+  .two-col{ display:flex; gap:14px; }
+  .two-col > div{ flex:1; }
+
+  .swatch-row{ display:flex; gap:10px; margin-top:6px; }
+  .swatch{
+    width:26px; height:26px; border-radius:8px;
+    border:2px solid var(--border);
+    cursor:pointer;
+    transition:transform 0.1s ease, border-color 0.1s ease;
+  }
+  .swatch.selected{
+    border-color:#fff;
+    transform:scale(1.08);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.15);
+  }
+
+  .portrait-row{ display:flex; gap:18px; align-items:flex-start; margin-bottom:18px; }
+  .portrait-box{
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    border-radius:14px;
+    padding:10px;
+    flex-shrink:0;
+  }
+  .portrait-fields{ flex:1; }
+
+  .alloc-row{
+    display:flex; align-items:center; gap:12px; margin-bottom:10px;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text);
+  }
+  .alloc-label{ width:56px; color:var(--text-dim); }
+  .alloc-btn{
+    width:28px; height:28px; border-radius:50%;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--text);
+    font-family:'Inter', sans-serif; font-size:15px;
+    cursor:pointer;
+    transition:border-color 0.12s ease, color 0.12s ease;
+  }
+  .alloc-btn:hover:not(:disabled){ border-color:var(--red); color:var(--red); }
+  .alloc-btn:active:not(:disabled){ transform:scale(0.9); }
+  .alloc-btn:disabled{ opacity:0.3; cursor:default; }
+  .alloc-val{ width:22px; text-align:center; font-weight:600; }
+  .alloc-remaining{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px;
+    margin-top:6px; color:var(--text-dim);
+  }
+
+  .randomize-btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:0.3px;
+    padding:10px 16px;
+    background:transparent;
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:999px;
+    cursor:pointer;
+    margin-bottom:20px;
+    transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .randomize-btn:hover{
+    border-color:var(--red); color:var(--red); background:rgba(255,77,94,0.06);
+  }
+
+  /* ---------- Loading screen ---------- */
+  #loadingScreen{
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(circle at 25% 20%, rgba(255,77,94,0.14), transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(79,168,255,0.10), transparent 45%),
+      var(--bg);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+    cursor:pointer;
+    transition:opacity 0.4s ease;
+  }
+  #loadingScreen.fade-out{ opacity:0; }
+
+  .loading-card{
+    width:100%;
+    max-width:300px;
+    text-align:center;
+    padding:0 20px;
+  }
+  .loading-title{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:21px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--text);
+    margin-bottom:4px;
+  }
+  .loading-subtitle{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:30px;
+  }
+
+  .stamp-anim-wrap{
+    height:60px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:24px;
+  }
+  .stamp-anim{
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    border:3px solid var(--surface-2);
+    border-top-color:var(--red);
+    animation:spin 0.85s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .loading-track{
+    height:6px;
+    border-radius:999px;
+    background:var(--surface-2);
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .loading-fill{
+    height:100%;
+    width:0%;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--red), #FF8A3D);
+  }
+  .loading-status{
+    font-family:'Inter', sans-serif;
+    font-size:13px;
+    color:var(--text-dim);
+    min-height:18px;
+  }
+  .loading-skip{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    opacity:0.6;
+    margin-top:22px;
+  }
+
+  /* ---------- Punch-timing mini-game ---------- */
+  .timing-track{
+    position:relative;
+    height:10px;
+    border-radius:999px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    margin:6px 0 16px;
+  }
+  .timing-target{
+    position:absolute;
+    top:-1px;
+    height:12px;
+    border-radius:6px;
+    background:rgba(255,198,75,0.28);
+    border:1px solid var(--gold);
+  }
+  .timing-marker{
+    position:absolute;
+    top:-5px;
+    width:4px;
+    height:20px;
+    border-radius:2px;
+    background:#fff;
+    box-shadow:0 0 10px rgba(255,255,255,0.7);
+    transform:translateX(-50%);
+    left:50%;
+  }
+  .timing-throw{
+    text-align:center;
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:1px;
+  }
+
+  /* ---------- Stat change feedback ---------- */
+  @keyframes pulseUp{
+    0%{ color:var(--green); transform:scale(1.25); }
+    100%{ color:inherit; transform:scale(1); }
+  }
+  @keyframes pulseDown{
+    0%{ color:var(--red); transform:scale(1.25); }
+    100%{ color:inherit; transform:scale(1); }
+  }
+  .pulse-up{ display:inline-block; animation:pulseUp 0.6s ease; }
+  .pulse-down{ display:inline-block; animation:pulseDown 0.6s ease; }
+
+  /* ---------- Shop ---------- */
+  .shop-link-btn{
+    margin-top:14px;
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:12.5px;
+    letter-spacing:0.3px;
+    padding:10px 14px;
+    background:linear-gradient(135deg, var(--gold), #FFE08A);
+    color:#1A1300;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    transition:transform 0.12s ease;
+  }
+  .shop-link-btn:hover{ transform:translateY(-1px); }
+  .shop-link-btn:active{ transform:scale(0.97); }
+
+  .shop-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(6,7,10,0.72);
+    backdrop-filter:blur(3px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:1100;
+    padding:20px;
+  }
+  .shop-card{
+    width:100%;
+    max-width:440px;
+    max-height:82vh;
+    overflow-y:auto;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,0.7);
+  }
+  .shop-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 20px;
+    border-bottom:1px solid var(--border);
+    position:sticky;
+    top:0;
+    background:var(--surface);
+  }
+  .shop-title{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:17px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+  }
+  .shop-close{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    width:30px; height:30px;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:14px;
+  }
+  .shop-close:hover{ border-color:var(--red); color:var(--red); }
+  .shop-money{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    font-weight:700;
+    color:var(--green);
+    padding:14px 20px 0;
+  }
+  .shop-categories{ padding:14px 20px 20px; }
+  .shop-category{ margin-bottom:20px; }
+  .shop-cat-title{
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .shop-tier-list{ display:flex; flex-direction:column; gap:8px; }
+  .shop-tier{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  .shop-tier.owned{ border-color:var(--green); background:rgba(52,211,153,0.08); }
+  .shop-tier-name{ font-family:'Inter', sans-serif; font-size:13px; font-weight:600; }
+  .shop-tier-desc{ font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--text-dim); margin-top:3px; }
+  .shop-owned-badge{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:0.5px;
+    color:var(--green);
+    background:rgba(52,211,153,0.15);
+    padding:4px 8px;
+    border-radius:6px;
+    white-space:nowrap;
+  }
+  .shop-buy-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    font-weight:700;
+    color:#1A1300;
+    background:linear-gradient(135deg, var(--gold), #FFE08A);
+    border:none;
+    border-radius:8px;
+    padding:8px 12px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:transform 0.12s ease;
+  }
+  .shop-buy-btn:hover:not(:disabled){ transform:translateY(-1px); }
+  .shop-buy-btn:active:not(:disabled){ transform:scale(0.95); }
+  .shop-buy-btn:disabled{ opacity:0.35; cursor:default; }
+
+  /* ---------- Finances hub (tabs + new panels) ---------- */
+  .finance-tabs{
+    display:flex;
+    gap:6px;
+    padding:12px 20px 0;
+    overflow-x:auto;
+  }
+  .finance-tab{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:0.2px;
+    color:var(--text-dim);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:7px 13px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all 0.12s ease;
+  }
+  .finance-tab:hover{ color:var(--text); }
+  .finance-tab.active{
+    color:#1A1300;
+    background:linear-gradient(135deg, var(--gold), #FFE08A);
+    border-color:transparent;
+  }
+  .finance-panel{ padding:14px 20px 20px; }
+
+  .finance-note{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    color:var(--text-dim);
+    line-height:1.5;
+    margin-bottom:14px;
+  }
+  .finance-stat-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:12px;
+  }
+  .finance-stat-label{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; }
+  .finance-stat-value{ font-family:'Oswald', sans-serif; font-weight:700; font-size:18px; color:var(--green); }
+  .finance-stat-value.negative{ color:var(--red); }
+
+  .finance-btn-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .finance-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    font-weight:700;
+    color:var(--text);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:9px 13px;
+    cursor:pointer;
+    transition:transform 0.12s ease, border-color 0.12s ease;
+  }
+  .finance-btn:hover:not(:disabled){ border-color:var(--gold); transform:translateY(-1px); }
+  .finance-btn:active:not(:disabled){ transform:scale(0.95); }
+  .finance-btn:disabled{ opacity:0.35; cursor:default; }
+  .finance-btn.primary{
+    background:linear-gradient(135deg, var(--gold), #FFE08A);
+    color:#1A1300;
+    border:none;
+  }
+
+  .social-card{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:12px;
+  }
+  .social-card-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .social-card-name{ font-family:'Oswald', sans-serif; font-weight:700; font-size:14px; letter-spacing:0.3px; }
+  .social-card-followers{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--gold); font-weight:700; }
+  .social-card-income{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); margin-bottom:10px; }
+
+  .sponsor-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+    margin-bottom:8px;
+  }
+  .sponsor-name{ font-family:'Inter', sans-serif; font-size:13px; font-weight:600; }
+  .sponsor-meta{ font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--text-dim); margin-top:3px; }
+  .sponsor-amount{ font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:700; color:var(--green); white-space:nowrap; }
+
+  /* ---------- Generated visuals ---------- */
+  .portrait-strip{
+    display:flex;
+    justify-content:center;
+    padding:16px 24px 4px;
+    border-bottom:1px solid var(--border);
+  }
+  .portrait-strip svg{ display:block; }
+
+  .shop-tier-icon{ flex-shrink:0; display:flex; align-items:center; justify-content:center; width:60px; }
+  .shop-tier-info{ flex:1; }
+  .shop-tier-action{ flex-shrink:0; }
+
+  /* ---------- 3D fight scene ---------- */
+  .fight-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(4,5,7,0.88);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:1200;
+    cursor:pointer;
+    padding:16px;
+  }
+  .fight-card{
+    width:100%;
+    max-width:420px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
+  }
+  .fight-hud-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+  }
+  .fight-name{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .fight-name.left{ color:var(--red); text-align:left; }
+  .fight-name.right{ color:var(--blue); text-align:right; }
+  .fight-vs{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    flex-shrink:0;
+  }
+  #fightCanvasWrap{
+    width:100%;
+    aspect-ratio:16/10;
+    background:radial-gradient(circle at 50% 30%, #1c2028, #0c0d10);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  #fightCanvasWrap canvas{ display:block; width:100%; height:100%; }
+  .fight-result{
+    min-height:24px;
+    text-align:center;
+    padding:14px 16px 4px;
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--text);
+  }
+  .fight-skip{
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    opacity:0.6;
+    padding:2px 0 14px;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<!-- ============ LOADING SCREEN ============ -->
+<div id="loadingScreen">
+  <div class="loading-card">
+    <div class="loading-title">BOXING COMMISSION</div>
+    <div class="loading-subtitle">OFFICE OF RECORDS</div>
+    <div class="stamp-anim-wrap">
+      <div class="stamp-anim"></div>
+    </div>
+    <div class="loading-track"><div class="loading-fill" id="loadingFill"></div></div>
+    <div class="loading-status" id="loadingStatus">Pulling your file...</div>
+    <div class="loading-skip">tap anywhere to skip</div>
+  </div>
+</div>
+
+<!-- ============ CHARACTER CREATION SCREEN ============ -->
+<div class="ledger hidden" id="creationScreen">
+  <div class="header">
+    <div class="file-no">STEP 1 OF 1</div>
+    <div class="title">LICENSE APPLICATION</div>
+    <div style="font-family:'Inter',sans-serif; font-size:13px; color:var(--text-dim); margin-top:4px;">
+      Fill out your fighter's file before it can be opened.
+    </div>
+  </div>
+
+  <div class="stats">
+    <button type="button" class="randomize-btn" id="randomizeBtn">🎲 RANDOMIZE EVERYTHING</button>
+
+    <div class="field-row">
+      <label>FIGHTER NAME</label>
+      <input type="text" id="custName" placeholder="e.g. Jordan Reyes" maxlength="24">
+    </div>
+
+    <div class="two-col">
+      <div class="field-row">
+        <label>NICKNAME (OPTIONAL)</label>
+        <input type="text" id="custNickname" placeholder="e.g. The Hammer" maxlength="20">
+      </div>
+      <div class="field-row">
+        <label>HOMETOWN</label>
+        <input type="text" id="custHometown" placeholder="e.g. Detroit, MI" maxlength="24">
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="field-row">
+        <label>WEIGHT CLASS</label>
+        <select id="custWeightClass"></select>
+      </div>
+      <div class="field-row">
+        <label>FIGHTING STANCE</label>
+        <select id="custStance"></select>
+        <div class="meta-line" id="stanceDesc" style="margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <div class="portrait-row">
+      <div class="portrait-box">
+        <svg id="portraitSvg" width="72" height="72" viewBox="0 0 72 72">
+          <circle cx="36" cy="20" r="12" fill="var(--ink)" opacity="0.12" stroke="var(--ink)" stroke-width="1.5"/>
+          <rect x="18" y="34" width="36" height="24" rx="5" fill="var(--ink)" opacity="0.12" stroke="var(--ink)" stroke-width="1.5"/>
+          <rect id="portraitTrunks" x="18" y="46" width="36" height="12" rx="3" fill="#A23B2E"/>
+          <circle id="portraitGloveL" cx="12" cy="50" r="8" fill="#A23B2E" stroke="var(--ink)" stroke-width="1.5"/>
+          <circle id="portraitGloveR" cx="60" cy="50" r="8" fill="#A23B2E" stroke="var(--ink)" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="portrait-fields">
+        <div class="field-row">
+          <label>TRUNKS COLOR</label>
+          <div class="swatch-row" id="trunksSwatches"></div>
+        </div>
+        <div class="field-row">
+          <label>GLOVE COLOR</label>
+          <div class="swatch-row" id="glovesSwatches"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <label>ATTRIBUTE POINTS — distribute 15 points before your first camp</label>
+      <div class="alloc-row" data-stat="power">
+        <span class="alloc-label">Power</span>
+        <button type="button" class="alloc-btn" data-stat="power" data-dir="-1">–</button>
+        <span class="alloc-val" id="allocPowerVal">0</span>
+        <button type="button" class="alloc-btn" data-stat="power" data-dir="1">+</button>
+      </div>
+      <div class="alloc-row" data-stat="speed">
+        <span class="alloc-label">Speed</span>
+        <button type="button" class="alloc-btn" data-stat="speed" data-dir="-1">–</button>
+        <span class="alloc-val" id="allocSpeedVal">0</span>
+        <button type="button" class="alloc-btn" data-stat="speed" data-dir="1">+</button>
+      </div>
+      <div class="alloc-row" data-stat="chin">
+        <span class="alloc-label">Chin</span>
+        <button type="button" class="alloc-btn" data-stat="chin" data-dir="-1">–</button>
+        <span class="alloc-val" id="allocChinVal">0</span>
+        <button type="button" class="alloc-btn" data-stat="chin" data-dir="1">+</button>
+      </div>
+      <div class="alloc-remaining">Points remaining: <span id="allocRemaining">15</span> · Chin reduces damage taken in fights</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="stamp-btn" id="startBtn">OPEN<br>FILE</button>
+  </div>
+</div>
+
+<!-- ============ GAMEPLAY SCREEN ============ -->
+<div class="ledger hidden" id="gameScreen">
+
+  <div class="header">
+    <div class="seal" id="seal">AMATEUR<br>CARD</div>
+    <div class="file-no" id="fileNo">LICENSE NO. 000001</div>
+    <div class="title">BOXING COMMISSION LEDGER</div>
+    <div class="name-row">
+      <span id="displayName">—</span>
+    </div>
+    <div class="meta-line" id="metaLine"></div>
+  </div>
+
+  <div class="portrait-strip" id="portraitStrip"></div>
+
+  <div class="stats">
+    <div class="stat-line"><span class="stat-label">AGE</span><span></span><span class="stat-val" id="ageVal">14</span></div>
+    <div class="stat-line">
+      <span class="stat-label">HEALTH</span>
+      <span class="bar-track"><span class="bar-fill" id="bar-health"></span></span>
+      <span class="stat-val" id="val-health">100</span>
+    </div>
+    <div class="stat-line">
+      <span class="stat-label">POWER</span>
+      <span class="bar-track"><span class="bar-fill" id="bar-power"></span></span>
+      <span class="stat-val" id="val-power">30</span>
+    </div>
+    <div class="stat-line">
+      <span class="stat-label">SPEED</span>
+      <span class="bar-track"><span class="bar-fill" id="bar-speed"></span></span>
+      <span class="stat-val" id="val-speed">30</span>
+    </div>
+    <div class="stat-line">
+      <span class="stat-label">FAME</span>
+      <span class="bar-track"><span class="bar-fill" id="bar-fame"></span></span>
+      <span class="stat-val" id="val-fame">0</span>
+    </div>
+    <div class="tier-line">
+      <span>STANDING</span>
+      <span id="tierVal">Amateur</span>
+    </div>
+    <div class="record-line">
+      <span>FIGHT RECORD (W-L-D)</span>
+      <span id="recordVal">0-0-0</span>
+    </div>
+    <div class="money-line">
+      <span>PURSE EARNINGS</span>
+      <span id="moneyVal">$0</span>
+    </div>
+    <button type="button" class="shop-link-btn" id="financeBtn">💰 Manage Finances</button>
+  </div>
+
+  <div class="notes">
+    <div class="notes-title">FIGHT LOG</div>
+    <div id="log"></div>
+  </div>
+
+  <div class="active-event" id="activeEventBox">
+    <div class="prompt" id="promptText">Press the stamp below to open your file at the gym.</div>
+    <div class="choices" id="choicesBox"></div>
+  </div>
+
+  <div class="footer">
+    <button class="stamp-btn" id="ageBtn">AGE UP</button>
+  </div>
+
+  <div class="closed" id="closedBox">
+    <div class="closed-stamp">CAREER CLOSED</div>
+    <div class="epitaph" id="epitaphText"></div>
+    <button class="restart-btn" id="restartBtn">CREATE NEW FIGHTER</button>
+  </div>
+
+</div>
+
+<!-- ============ FINANCES HUB (tabbed) ============ -->
+<div class="shop-overlay hidden" id="financeScreen">
+  <div class="shop-card">
+    <div class="shop-header">
+      <div class="shop-title">Finances</div>
+      <button type="button" class="shop-close" id="closeFinanceBtn">✕</button>
+    </div>
+    <div class="shop-money" id="shopMoneyVal">$0</div>
+
+    <div class="finance-tabs" id="financeTabs">
+      <button type="button" class="finance-tab active" data-tab="shop">Shop</button>
+      <button type="button" class="finance-tab" data-tab="invest">Invest</button>
+      <button type="button" class="finance-tab" data-tab="ventures">Ventures</button>
+      <button type="button" class="finance-tab" data-tab="social">Social</button>
+      <button type="button" class="finance-tab" data-tab="sponsors">Sponsors</button>
+    </div>
+
+    <div class="finance-panel" id="panel-shop">
+      <div class="shop-categories" id="shopCategories"></div>
+    </div>
+
+    <div class="finance-panel hidden" id="panel-invest">
+      <div class="shop-categories" id="investPanel"></div>
+    </div>
+
+    <div class="finance-panel hidden" id="panel-ventures">
+      <div class="shop-categories" id="venturesPanel"></div>
+    </div>
+
+    <div class="finance-panel hidden" id="panel-social">
+      <div class="shop-categories" id="socialPanel"></div>
+    </div>
+
+    <div class="finance-panel hidden" id="panel-sponsors">
+      <div class="shop-categories" id="sponsorsPanel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3D FIGHT SCENE ============ -->
+<div class="fight-overlay hidden" id="fightScene">
+  <div class="fight-card">
+    <div class="fight-hud-top">
+      <div class="fight-name left" id="fightNameLeft">YOU</div>
+      <div class="fight-vs">VS</div>
+      <div class="fight-name right" id="fightNameRight">OPPONENT</div>
+    </div>
+    <div id="fightCanvasWrap"></div>
+    <div class="fight-result" id="fightResultText"></div>
+    <div class="fight-skip">tap to skip</div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   BOXING COMMISSION LEDGER — a boxing career simulator
+   Written to be readable if you're new to JavaScript.
+
+   Sections:
+   DATA TABLES   -> weight classes, colors, name lists
+   CREATION      -> the character-builder screen and its own mini state
+   STATE         -> the one object that holds everything about your boxer
+   HELPERS       -> small reusable functions (clamp, rand, names)
+   FIGHT ENGINE  -> generateOpponents() + resolveFight() = the core "game"
+   EVENT DATA    -> one-time / recurring story beats (non-fight years)
+   RENDER        -> draws state onto the page
+   GAME FLOW     -> ageUp() -> story event OR training -> fight card -> resolve
+   ========================================================= */
+
+/* ---------- DATA TABLES ---------- */
+const WEIGHT_CLASSES = {
+  fly:    { label: "Flyweight",         power: -8,  speed: 10, purseMult: 0.7 },
+  feather:{ label: "Featherweight",     power: -4,  speed: 6,  purseMult: 0.85 },
+  light:  { label: "Lightweight",       power: 0,   speed: 0,  purseMult: 1 },
+  welter: { label: "Welterweight",      power: 4,   speed: -2, purseMult: 1.15 },
+  middle: { label: "Middleweight",      power: 8,   speed: -4, purseMult: 1.3 },
+  lheavy: { label: "Light Heavyweight", power: 12,  speed: -6, purseMult: 1.5 },
+  heavy:  { label: "Heavyweight",       power: 18,  speed: -10,purseMult: 1.8 }
+};
+
+/* Real fighting stances/guards pulled from boxing history, each with a
+   distinct combat tradeoff. scoreBonus() is added to your fight score,
+   damageMult scales how much damage you take, fameMult scales how much
+   the crowd (and fame gain) rewards the style. */
+const STANCES = {
+  orthodox: {
+    label: "Orthodox", origin: "Standard modern stance: left foot and left hand forward, right hand as the power hand.",
+    scoreBonus(){ return 0; }, damageMult: 1, fameMult: 1
+  },
+  southpaw: {
+    label: "Southpaw", origin: "Right foot and right hand forward, the mirror of orthodox. Awkward angles for opponents who rarely train against it.",
+    scoreBonus(){ return 3; }, damageMult: 1, fameMult: 1
+  },
+  switch: {
+    label: "Switch-Hitter", origin: "Alternates between orthodox and southpaw mid-fight, a rare skill mastered by fighters like Terrence Crawford.",
+    scoreBonus(){ return rand(0, 6); }, damageMult: 1, fameMult: 1.05
+  },
+  peekaboo: {
+    label: "Peek-a-Boo", origin: "Cus D'Amato's tight, high-guard, bob-and-weave style built to get inside — Mike Tyson's signature.",
+    scoreBonus(){ return 5; }, damageMult: 1.15, fameMult: 1.2
+  },
+  phillyshell: {
+    label: "Philly Shell", origin: "Shoulder-roll counterpunching out of Philadelphia gyms, popularized worldwide by Floyd Mayweather Jr.",
+    scoreBonus(){ return -2; }, damageMult: 0.65, fameMult: 0.9
+  },
+  crossarm: {
+    label: "Cross-Arm Guard", origin: "Archie Moore's folded-arm shell, rooted in old bare-knuckle defense. Ugly, patient, hard to hit clean.",
+    scoreBonus(){ return -3; }, damageMult: 0.7, fameMult: 0.8
+  },
+  squared: {
+    label: "Square Stance", origin: "Feet parallel rather than staggered, keeping both hands equally live for power at the cost of exposure.",
+    scoreBonus(){ return 6; }, damageMult: 1.25, fameMult: 1.1
+  },
+  outboxer: {
+    label: "Out-Boxer / Long Guard", origin: "Extended lead arm and constant lateral movement to control range, echoing Muhammad Ali's footwork.",
+    scoreBonus(){ return 2; }, damageMult: 0.8, fameMult: 0.85
+  },
+  bareknuckle: {
+    label: "Bare-Knuckle Guard", origin: "Upright, stiff-armed posture from 19th-century London Prize Ring boxing, before padded gloves existed.",
+    scoreBonus(){ return -4; }, damageMult: 0.85, fameMult: 0.75
+  }
+};
+
+/* ---------- SHOP ----------
+   Four categories. Gym and Garage have four tiers, House and Staff have
+   three (the first tier in every category is free/default). Buying a
+   tier swaps your current tier for that category and applies its
+   bonuses everywhere relevant: training gains, purse size, yearly
+   health decay, and passive fame. The top Gym tier is special — it
+   flips you from training AT a gym to OWNING one, which starts
+   attracting prospects who sign with you for a cut of their earnings. */
+const SHOP_ITEMS = {
+  gym: {
+    label: "Training Gym", icon: "🥊",
+    tiers: [
+      { key: "none", label: "Neighborhood Gym", price: 0, desc: "Basic equipment. No bonus.", trainingMult: 1 },
+      { key: "pro", label: "Pro Training Center", price: 5000, desc: "+50% stat gains from training camps.", trainingMult: 1.5 },
+      { key: "elite", label: "Elite Performance Institute", price: 20000, desc: "+100% training gains, +2 health/year.", trainingMult: 2, healthRegen: 2 },
+      { key: "owner", label: "Own Your Gym", price: 60000, desc: "+100% training gains, +2 health/year, and prospects start signing to your gym for passive income.", trainingMult: 2, healthRegen: 2, ownsGym: true }
+    ]
+  },
+  house: {
+    label: "Residence", icon: "🏠",
+    tiers: [
+      { key: "none", label: "Rented Apartment", price: 0, desc: "No bonus.", healthDecayReduction: 0, fameYear: 0 },
+      { key: "suburban", label: "Suburban House", price: 8000, desc: "-1 health decay/year, +1 fame/year.", healthDecayReduction: 1, fameYear: 1 },
+      { key: "mansion", label: "Hilltop Mansion", price: 40000, desc: "-2 health decay/year, +3 fame/year, +5% purses.", healthDecayReduction: 2, fameYear: 3, purseMult: 1.05 }
+    ]
+  },
+  car: {
+    label: "Garage", icon: "🚗",
+    tiers: [
+      { key: "none", label: "Used Honda Civic", price: 0, desc: "No bonus.", fameInstant: 0, fameYear: 0 },
+      { key: "mustang", label: "Ford Mustang GT", price: 6000, desc: "+5 fame instantly, +1 fame/year.", fameInstant: 5, fameYear: 1 },
+      { key: "bmw", label: "BMW M4 Competition", price: 15000, desc: "+9 fame instantly, +2 fame/year.", fameInstant: 9, fameYear: 2 },
+      { key: "porsche", label: "Porsche 911 Turbo S", price: 35000, desc: "+18 fame instantly, +3 fame/year.", fameInstant: 18, fameYear: 3 },
+      { key: "lambo", label: "Lamborghini Huracán", price: 75000, desc: "+30 fame instantly, +5 fame/year, +3% purses.", fameInstant: 30, fameYear: 5, purseMult: 1.03 },
+      { key: "rolls", label: "Rolls-Royce Phantom", price: 150000, desc: "+45 fame instantly, +7 fame/year, +5% purses.", fameInstant: 45, fameYear: 7, purseMult: 1.05 }
+    ]
+  },
+  staff: {
+    label: "Camp Staff", icon: "🧑‍⚕️",
+    tiers: [
+      { key: "none", label: "Solo Training", price: 0, desc: "No bonus.", purseMult: 1, healthRegen: 0 },
+      { key: "trainer", label: "Personal Trainer", price: 4000, desc: "+10% purses.", purseMult: 1.1, healthRegen: 0 },
+      { key: "camp", label: "Full Camp Team", price: 15000, desc: "+20% purses, +2 health/year.", purseMult: 1.2, healthRegen: 2 }
+    ]
+  }
+};
+
+const OWNED_FIELD = { gym: "ownedGym", house: "ownedHouse", car: "ownedCar", staff: "ownedStaff" };
+const ROSTER_MAX = 6;
+
+/* Gathers all four categories' current-tier bonuses into one object,
+   so training/fight/aging code just reads a single flat structure. */
+function getShopBonuses(s){
+  const gym = SHOP_ITEMS.gym.tiers.find(t => t.key === s.ownedGym);
+  const house = SHOP_ITEMS.house.tiers.find(t => t.key === s.ownedHouse);
+  const car = SHOP_ITEMS.car.tiers.find(t => t.key === s.ownedCar);
+  const staff = SHOP_ITEMS.staff.tiers.find(t => t.key === s.ownedStaff);
+  return {
+    trainingMult: gym.trainingMult || 1,
+    healthDecayReduction: house.healthDecayReduction || 0,
+    healthRegen: (gym.healthRegen || 0) + (staff.healthRegen || 0),
+    purseMult: (house.purseMult || 1) * (staff.purseMult || 1) * (car.purseMult || 1),
+    fameYear: (house.fameYear || 0) + (car.fameYear || 0),
+    ownsGym: gym.ownsGym || false
+  };
+}
+
+/* Each year you own your gym: a chance a new prospect signs, and your
+   whole roster kicks back a cut of their purses as passive income. */
+function runGymRoster(s){
+  if(s.roster.length < ROSTER_MAX && Math.random() < 0.3){
+    const prospect = { name: randomFighterName(), potential: rand(20, 80), years: 0 };
+    s.roster.push(prospect);
+    logEntry(`A new prospect signed to your gym: ${prospect.name}.`, `Potential rating: ${prospect.potential}`);
+  }
+
+  if(s.roster.length > 0){
+    let income = 0;
+    s.roster.forEach(f => {
+      income += Math.max(0, Math.round(f.potential * 6 + rand(-10, 20)));
+      f.years += 1;
+      f.potential = Math.min(100, f.potential + rand(0, 3));
+    });
+    s.money += income;
+    logEntry(`Your gym roster (${s.roster.length} fighter${s.roster.length === 1 ? "" : "s"}) brought in purse cuts.`, `Cash +$${income.toLocaleString()}`);
+  }
+}
+
+/* ============================================================
+   FINANCES — investing, side businesses, social media, sponsors.
+   Everything here is optional and lives behind the Finances hub;
+   ageUp() calls the four "runX" functions below once per year.
+   ============================================================ */
+
+/* ---------- Investing ---------- */
+function runInvestment(s){
+  if(s.investment <= 0) return;
+  const pct = (Math.random() * 40 - 15) / 100; // -15% to +25%, skewed positive
+  const change = Math.round(s.investment * pct);
+  s.investment = Math.max(0, s.investment + change);
+  s.lastInvestChangePct = Math.round(pct * 1000) / 10;
+  logEntry(
+    `Your portfolio ${pct >= 0 ? "gained" : "lost"} value this year.`,
+    `${pct >= 0 ? "+" : ""}${s.lastInvestChangePct}% (${change >= 0 ? "+" : ""}$${change.toLocaleString()})`
+  );
+}
+
+/* ---------- Side ventures ---------- */
+const VENTURES = {
+  foodTruck:    { label: "Food Truck", price: 3000, desc: "A modest side hustle.", incomeMin: 400, incomeMax: 800 },
+  clothingLine: { label: "Signature Clothing Line", price: 10000, desc: "Merch income that scales with your fame.", incomeMin: 600, incomeMax: 1200, fameScale: 8 },
+  realEstate:   { label: "Rental Properties", price: 25000, desc: "Steady, reliable rental income.", incomeMin: 2500, incomeMax: 4000 },
+  restaurant:   { label: "Restaurant Chain", price: 50000, desc: "High income, but occasional bad years.", incomeMin: 5000, incomeMax: 9000, riskChance: 0.15, riskLoss: 3000 }
+};
+
+function runVentures(s){
+  Object.keys(VENTURES).forEach(key => {
+    if(!s.ventures[key]) return;
+    const v = VENTURES[key];
+    let income = rand(v.incomeMin, v.incomeMax);
+    if(v.fameScale) income += Math.round(s.fame * v.fameScale);
+    if(v.riskChance && Math.random() < v.riskChance){
+      income = Math.max(0, income - v.riskLoss);
+      logEntry(`${v.label} had a rough year.`, `Cash +$${income.toLocaleString()} (below average)`);
+    } else {
+      logEntry(`${v.label} turned a profit.`, `Cash +$${income.toLocaleString()}`);
+    }
+    s.money += income;
+  });
+}
+
+/* ---------- Social media / streaming ---------- */
+const SOCIAL_PLATFORMS = {
+  youtube:   { label: "YouTube", icon: "▶️", actionLabel: "Upload a video", followerNoun: "subscribers", rate: 0.08, growthMin: 50, growthMax: 400 },
+  streaming: { label: "Live Streaming", icon: "🎥", actionLabel: "Go live", followerNoun: "viewers", rate: 0.10, growthMin: 40, growthMax: 350 },
+  social:    { label: "Social Media", icon: "📱", actionLabel: "Post content", followerNoun: "followers", rate: 0.05, growthMin: 80, growthMax: 500 }
+};
+
+function doSocialAction(key){
+  const platform = SOCIAL_PLATFORMS[key];
+  const p = state.social[key];
+  if(p.postedThisYear) return;
+
+  let gain = Math.round(rand(platform.growthMin, platform.growthMax) * (1 + state.fame / 80));
+  let viral = false;
+  if(Math.random() < 0.12){ gain *= 4; viral = true; }
+
+  p.followers += gain;
+  p.postedThisYear = true;
+
+  logEntry(
+    viral ? `🔥 A ${platform.label} post went viral!` : `You posted on ${platform.label}.`,
+    `${platform.followerNoun} +${gain.toLocaleString()}`
+  );
+  render();
+  renderFinanceScreen();
+}
+
+function runSocialIncome(s){
+  Object.keys(SOCIAL_PLATFORMS).forEach(key => {
+    const platform = SOCIAL_PLATFORMS[key];
+    const p = s.social[key];
+    p.postedThisYear = false;
+    if(p.followers <= 0) return;
+    const income = Math.round(p.followers * platform.rate);
+    if(income > 0){
+      s.money += income;
+      logEntry(`${platform.label} ad revenue and deals came in.`, `Cash +$${income.toLocaleString()}`);
+    }
+  });
+}
+
+/* ---------- Sponsorships ---------- */
+const SPONSOR_BRANDS = ["Titan Sportswear", "Apex Nutrition", "Rally Energy", "Crown Athletics", "Voltage Gear", "Northline Insurance", "Summit Watches", "BlackFin Seafood"];
+const SPONSOR_MAX = 3;
+
+function seekSponsorship(){
+  if(state.sponsorSoughtThisYear || state.sponsorships.length >= SPONSOR_MAX) return;
+  state.sponsorSoughtThisYear = true;
+
+  const chance = Math.max(0.15, Math.min(0.8, 0.2 + state.fame / 150));
+  if(Math.random() < chance){
+    const deal = { brand: pick(SPONSOR_BRANDS), yearlyAmount: Math.round(500 + state.fame * 10 + rand(0, 500)), yearsLeft: rand(2, 4) };
+    state.sponsorships.push(deal);
+    logEntry(`Signed a sponsorship deal with ${deal.brand}.`, `$${deal.yearlyAmount.toLocaleString()}/year for ${deal.yearsLeft} years`);
+  } else {
+    logEntry("No sponsors bit this year.", "");
+  }
+  render();
+  renderFinanceScreen();
+}
+
+function runSponsorships(s){
+  s.sponsorSoughtThisYear = false;
+  if(s.sponsorships.length === 0) return;
+
+  let income = 0;
+  s.sponsorships.forEach(deal => { income += deal.yearlyAmount; deal.yearsLeft -= 1; });
+  s.money += income;
+  logEntry(`Sponsorship payouts (${s.sponsorships.length} deal${s.sponsorships.length === 1 ? "" : "s"}).`, `Cash +$${income.toLocaleString()}`);
+
+  const expired = s.sponsorships.filter(d => d.yearsLeft <= 0);
+  s.sponsorships = s.sponsorships.filter(d => d.yearsLeft > 0);
+  expired.forEach(d => logEntry(`Your sponsorship with ${d.brand} expired.`, ""));
+}
+
+const SWATCH_COLORS = ["#A23B2E","#2C4A6E","#24291F","#8C6B1F","#3C6E47","#5B3A6E"];
+const CITIES = ["Detroit, MI","Philadelphia, PA","Mexico City","Manchester, UK","Lagos, NG",
+                 "Manila, PH","Kingston, JM","Havana, CU","Glasgow, UK","Accra, GH","Baltimore, MD","Cardiff, UK"];
+
+/* ---------- HELPERS ---------- */
+function clamp(n){ return Math.max(0, Math.min(100, Math.round(n))); }
+function rand(min, max){ return Math.round(Math.random() * (max - min) + min); }
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+const FIRST_NAMES = ["Marcus","Danny","Eli","Rico","Theo","Junior","Ray","Nico","Sam","Ezra","Kian","Dante"];
+const LAST_NAMES  = ["Vega","Okafor","Petrov","Silva","Brennan","Delgado","Kwan","Marsh","Duarte","Holt","Reyes","Voss"];
+const NICKNAMES   = ["The Hammer","Iron","Lightning","The Butcher","Ghost","The Wall","Smoke","The Anvil","Cyclone","Shadow"];
+
+function randomFighterName(){
+  const nick = Math.random() < 0.6 ? `"${pick(NICKNAMES)}" ` : "";
+  return `${nick}${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
+}
+
+/* ============================================================
+   GENERATED VISUALS
+   No image-generation API is available in this environment, so
+   these build lightweight, gradient-shaded "3D-style" SVG art on
+   the fly instead of static art or photos. Each one reads from
+   live state (weight class, colors, tier, champion status) so the
+   picture always matches what's actually equipped.
+   ============================================================ */
+let svgUid = 0;
+function nextUid(){ return ++svgUid; }
+
+const WEIGHT_BULK = { fly: 0.82, feather: 0.9, light: 1, welter: 1.06, middle: 1.13, lheavy: 1.2, heavy: 1.3 };
+
+function buildBoxerPortraitSVG(trunks, gloves, weightClassKey, champion){
+  const uid = nextUid();
+  const bulk = WEIGHT_BULK[weightClassKey] || 1;
+  const headR = Math.round(11 * Math.sqrt(bulk));
+  const bodyW = Math.round(34 * bulk);
+  const bodyX = 36 - bodyW / 2;
+  const gloveR = Math.round(7 * Math.sqrt(bulk));
+
+  return `
+  <svg width="88" height="88" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    ${champion ? `<circle cx="36" cy="34" r="34" fill="url(#glow-${uid})"/>` : ""}
+    <ellipse cx="36" cy="66" rx="20" ry="4" fill="rgba(0,0,0,0.35)"/>
+    <circle cx="36" cy="20" r="${headR}" fill="url(#skin-${uid})" stroke="rgba(255,255,255,0.15)"/>
+    <rect x="${bodyX}" y="32" width="${bodyW}" height="24" rx="7" fill="url(#skin-${uid})" stroke="rgba(255,255,255,0.12)"/>
+    <rect x="${bodyX}" y="44" width="${bodyW}" height="12" rx="3" fill="${trunks}"/>
+    ${champion ? `<rect x="${bodyX}" y="48" width="${bodyW}" height="5" fill="url(#belt-${uid})"/>` : ""}
+    <circle cx="${bodyX - 5}" cy="48" r="${gloveR}" fill="${gloves}" stroke="rgba(0,0,0,0.3)"/>
+    <circle cx="${bodyX + bodyW + 5}" cy="48" r="${gloveR}" fill="${gloves}" stroke="rgba(0,0,0,0.3)"/>
+    <defs>
+      <radialGradient id="skin-${uid}" cx="35%" cy="30%" r="75%">
+        <stop offset="0" stop-color="#454D5E"/><stop offset="1" stop-color="#1E222B"/>
+      </radialGradient>
+      ${champion ? `
+      <radialGradient id="glow-${uid}">
+        <stop offset="0" stop-color="rgba(255,198,75,0.4)"/><stop offset="1" stop-color="rgba(255,198,75,0)"/>
+      </radialGradient>
+      <linearGradient id="belt-${uid}" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#FFC64B"/><stop offset="1" stop-color="#B8860B"/>
+      </linearGradient>` : ""}
+    </defs>
+  </svg>`;
+}
+
+const CAR_PALETTES = {
+  none:    { body: "#8A93A3", body2: "#5B6472" },
+  mustang: { body: "#EF4444", body2: "#9B1C1C" },
+  bmw:     { body: "#3B82F6", body2: "#1E3A8A" },
+  porsche: { body: "#FACC15", body2: "#A16207" },
+  lambo:   { body: "#FB923C", body2: "#9A3412" },
+  rolls:   { body: "#2A2E38", body2: "#0A0B0E" }
+};
+
+function buildCarIconSVG(tierKey){
+  const uid = nextUid();
+  const p = CAR_PALETTES[tierKey] || CAR_PALETTES.none;
+  const sleek = ["porsche", "lambo", "rolls"].includes(tierKey);
+  const cabinH = sleek ? 9 : 15;
+  const spoiler = (tierKey === "lambo" || tierKey === "rolls")
+    ? `<rect x="72" y="${33 - cabinH}" width="13" height="3.5" rx="1" fill="#111827"/>` : "";
+  const trim = tierKey === "rolls" ? `<rect x="6" y="26" width="88" height="3" fill="#D4AF37"/>` : "";
+
+  return `
+  <svg width="60" height="34" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="45" rx="36" ry="3.5" fill="rgba(0,0,0,0.4)"/>
+    <rect x="12" y="${33 - cabinH}" width="76" height="${cabinH}" rx="5" fill="#111827" opacity="0.9"/>
+    <rect x="6" y="26" width="88" height="13" rx="7" fill="url(#car-${uid})"/>
+    ${trim}
+    ${spoiler}
+    <circle cx="28" cy="39" r="6.5" fill="#0B0D12"/><circle cx="28" cy="39" r="2.5" fill="#B8BFCC"/>
+    <circle cx="72" cy="39" r="6.5" fill="#0B0D12"/><circle cx="72" cy="39" r="2.5" fill="#B8BFCC"/>
+    <defs>
+      <linearGradient id="car-${uid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${p.body}"/><stop offset="1" stop-color="${p.body2}"/>
+      </linearGradient>
+    </defs>
+  </svg>`;
+}
+
+function buildHouseIconSVG(tierKey){
+  const uid = nextUid();
+
+  if(tierKey === "mansion"){
+    return `
+    <svg width="60" height="38" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="57" rx="40" ry="3.5" fill="rgba(0,0,0,0.4)"/>
+      <rect x="14" y="26" width="72" height="26" fill="url(#wall-${uid})"/>
+      <polygon points="10,26 50,6 90,26" fill="#3B3226"/>
+      <rect x="44" y="34" width="12" height="18" fill="#20232B"/>
+      <rect x="22" y="34" width="9" height="9" fill="#FFC64B" opacity="0.85"/>
+      <rect x="69" y="34" width="9" height="9" fill="#FFC64B" opacity="0.85"/>
+      <defs><linearGradient id="wall-${uid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#E9E2D0"/><stop offset="1" stop-color="#C9BFA3"/>
+      </linearGradient></defs>
+    </svg>`;
+  }
+
+  if(tierKey === "suburban"){
+    return `
+    <svg width="60" height="38" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="57" rx="32" ry="3.5" fill="rgba(0,0,0,0.4)"/>
+      <rect x="22" y="30" width="56" height="22" fill="url(#wall-${uid})"/>
+      <polygon points="18,30 50,12 82,30" fill="#7C4A2D"/>
+      <rect x="44" y="38" width="10" height="14" fill="#20232B"/>
+      <rect x="30" y="36" width="8" height="8" fill="#FFC64B" opacity="0.85"/>
+      <rect x="62" y="36" width="8" height="8" fill="#FFC64B" opacity="0.85"/>
+      <defs><linearGradient id="wall-${uid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#D9C9A3"/><stop offset="1" stop-color="#B79F72"/>
+      </linearGradient></defs>
+    </svg>`;
+  }
+
+  return `
+  <svg width="60" height="38" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="57" rx="26" ry="3.5" fill="rgba(0,0,0,0.4)"/>
+    <rect x="32" y="10" width="36" height="44" fill="url(#wall-${uid})"/>
+    ${[16, 26, 36, 46].map(y => `<rect x="37" y="${y}" width="7" height="6" fill="#9AA2B1" opacity="0.6"/><rect x="56" y="${y}" width="7" height="6" fill="#9AA2B1" opacity="0.6"/>`).join("")}
+    <defs><linearGradient id="wall-${uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4B5563"/><stop offset="1" stop-color="#262A33"/>
+    </linearGradient></defs>
+  </svg>`;
+}
+
+/* ============================================================
+   CREATION SCREEN
+   This section only deals with the character-builder form.
+   It keeps its own tiny bit of state (the point allocation)
+   until "OPEN FILE" is pressed, at which point it builds the
+   real game `state` object and hands control to the game.
+   ============================================================ */
+
+const creationPoints = { power: 0, speed: 0, chin: 0 };
+const POINT_POOL = 15;
+const MAX_PER_STAT = 12;
+let selectedTrunks = SWATCH_COLORS[0];
+let selectedGloves = SWATCH_COLORS[2];
+
+function buildWeightClassOptions(){
+  const select = document.getElementById("custWeightClass");
+  select.innerHTML = "";
+  Object.keys(WEIGHT_CLASSES).forEach(key => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = WEIGHT_CLASSES[key].label;
+    if(key === "light") opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+function buildStanceOptions(){
+  const select = document.getElementById("custStance");
+  select.innerHTML = "";
+  Object.keys(STANCES).forEach(key => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = STANCES[key].label;
+    if(key === "orthodox") opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+function updateStanceDesc(){
+  const key = document.getElementById("custStance").value;
+  document.getElementById("stanceDesc").textContent = STANCES[key].origin;
+}
+
+function buildSwatches(containerId, onPick, initialColor){
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  SWATCH_COLORS.forEach(color => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "swatch" + (color === initialColor ? " selected" : "");
+    btn.style.background = color;
+    btn.onclick = () => {
+      container.querySelectorAll(".swatch").forEach(s => s.classList.remove("selected"));
+      btn.classList.add("selected");
+      onPick(color);
+    };
+    container.appendChild(btn);
+  });
+}
+
+function updatePortrait(){
+  document.getElementById("portraitTrunks").setAttribute("fill", selectedTrunks);
+  document.getElementById("portraitGloveL").setAttribute("fill", selectedGloves);
+  document.getElementById("portraitGloveR").setAttribute("fill", selectedGloves);
+}
+
+function updateAllocatorUI(){
+  const used = creationPoints.power + creationPoints.speed + creationPoints.chin;
+  const remaining = POINT_POOL - used;
+  document.getElementById("allocPowerVal").textContent = creationPoints.power;
+  document.getElementById("allocSpeedVal").textContent = creationPoints.speed;
+  document.getElementById("allocChinVal").textContent = creationPoints.chin;
+  document.getElementById("allocRemaining").textContent = remaining;
+
+  document.querySelectorAll(".alloc-btn").forEach(btn => {
+    const stat = btn.dataset.stat;
+    const dir = Number(btn.dataset.dir);
+    if(dir > 0){
+      btn.disabled = remaining <= 0 || creationPoints[stat] >= MAX_PER_STAT;
+    } else {
+      btn.disabled = creationPoints[stat] <= 0;
+    }
+  });
+}
+
+function adjustPoint(stat, dir){
+  const used = creationPoints.power + creationPoints.speed + creationPoints.chin;
+  if(dir > 0 && used < POINT_POOL && creationPoints[stat] < MAX_PER_STAT){
+    creationPoints[stat] += 1;
+  } else if(dir < 0 && creationPoints[stat] > 0){
+    creationPoints[stat] -= 1;
+  }
+  updateAllocatorUI();
+}
+
+function resetAllocator(){
+  creationPoints.power = 0; creationPoints.speed = 0; creationPoints.chin = 0;
+  updateAllocatorUI();
+}
+
+function randomizeCreation(){
+  document.getElementById("custName").value = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
+  document.getElementById("custNickname").value = pick(NICKNAMES);
+  document.getElementById("custHometown").value = pick(CITIES);
+
+  const wcKeys = Object.keys(WEIGHT_CLASSES);
+  document.getElementById("custWeightClass").value = pick(wcKeys);
+  document.getElementById("custStance").value = pick(Object.keys(STANCES));
+  updateStanceDesc();
+
+  resetAllocator();
+  let remaining = POINT_POOL;
+  const stats = ["power","speed","chin"];
+  while(remaining > 0){
+    const s = pick(stats);
+    if(creationPoints[s] < MAX_PER_STAT){ creationPoints[s] += 1; remaining -= 1; }
+  }
+  updateAllocatorUI();
+
+  selectedTrunks = pick(SWATCH_COLORS);
+  do { selectedGloves = pick(SWATCH_COLORS); } while(selectedGloves === selectedTrunks);
+  buildSwatches("trunksSwatches", c => { selectedTrunks = c; updatePortrait(); }, selectedTrunks);
+  buildSwatches("glovesSwatches", c => { selectedGloves = c; updatePortrait(); }, selectedGloves);
+  updatePortrait();
+}
+
+function initCreationScreen(){
+  buildWeightClassOptions();
+  buildStanceOptions();
+  updateStanceDesc();
+  buildSwatches("trunksSwatches", c => { selectedTrunks = c; updatePortrait(); }, selectedTrunks);
+  buildSwatches("glovesSwatches", c => { selectedGloves = c; updatePortrait(); }, selectedGloves);
+  updatePortrait();
+  resetAllocator();
+
+  document.querySelectorAll(".alloc-btn").forEach(btn => {
+    btn.addEventListener("click", () => adjustPoint(btn.dataset.stat, Number(btn.dataset.dir)));
+  });
+  document.getElementById("custStance").addEventListener("change", updateStanceDesc);
+  document.getElementById("randomizeBtn").addEventListener("click", randomizeCreation);
+  document.getElementById("startBtn").addEventListener("click", startCareer);
+}
+
+function showCreationScreen(){
+  document.getElementById("gameScreen").classList.add("hidden");
+  document.getElementById("creationScreen").classList.remove("hidden");
+  resetAllocator();
+}
+
+/* ---------- STATE ----------
+   Built by startCareer() from whatever was chosen on the creation screen. */
+let state = null;
+
+function startCareer(){
+  const wcKey = document.getElementById("custWeightClass").value;
+  const wc = WEIGHT_CLASSES[wcKey];
+  const stanceKey = document.getElementById("custStance").value;
+
+  state = {
+    name: document.getElementById("custName").value.trim() || `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+    nickname: document.getElementById("custNickname").value.trim(),
+    hometown: document.getElementById("custHometown").value.trim() || "Unlisted",
+    weightClassKey: wcKey,
+    weightClassLabel: wc.label,
+    weightClassPurseMult: wc.purseMult,
+    stanceKey: stanceKey,
+    stanceLabel: STANCES[stanceKey].label,
+    chinBonus: creationPoints.chin,
+    trunksColor: selectedTrunks,
+    glovesColor: selectedGloves,
+
+    age: 14,
+    health: 100,
+    power: clamp(30 + wc.power + creationPoints.power),
+    speed: clamp(30 + wc.speed + creationPoints.speed),
+    fame: 0,
+    money: 0,
+    wins: 0, losses: 0, draws: 0,
+    turnedPro: false,
+    champion: false,
+    titleDefenses: 0,
+    retiredEarly: false,
+    alive: true,
+    usedOnceIds: [],
+
+    ownedGym: "none",
+    ownedHouse: "none",
+    ownedCar: "none",
+    ownedStaff: "none",
+    roster: [],
+
+    investment: 0,
+    lastInvestChangePct: null,
+    ventures: { foodTruck: false, clothingLine: false, realEstate: false, restaurant: false },
+    social: {
+      youtube:   { followers: 0, postedThisYear: false },
+      streaming: { followers: 0, postedThisYear: false },
+      social:    { followers: 0, postedThisYear: false }
+    },
+    sponsorships: [],
+    sponsorSoughtThisYear: false
+  };
+
+  document.getElementById("creationScreen").classList.add("hidden");
+  document.getElementById("gameScreen").classList.remove("hidden");
+
+  document.getElementById("log").innerHTML = "";
+  document.getElementById("ageBtn").disabled = false;
+  document.getElementById("activeEventBox").classList.remove("hidden");
+  document.getElementById("closedBox").classList.remove("show");
+  document.getElementById("promptText").textContent = "Press the stamp below to open your file at the gym.";
+  document.getElementById("choicesBox").innerHTML = "";
+  document.getElementById("fileNo").textContent =
+    "LICENSE NO. " + String(Math.floor(Math.random()*900000)+100000);
+  document.getElementById("displayName").textContent =
+    (state.nickname ? `"${state.nickname}" ` : "") + state.name;
+  document.getElementById("metaLine").textContent =
+    `${state.hometown} · ${state.weightClassLabel} · ${state.stanceLabel}`;
+
+  lastRendered = { health: null, power: null, speed: null, fame: null, money: null };
+  render();
+}
+
+/* ---------- FIGHT ENGINE ----------
+   generateOpponents() builds today's fight card.
+   resolveFight() is the whole "game": compare your stats to the
+   opponent's rating, decide win/loss/draw, and pay out the result. */
+
+function generateOpponents(s, isAmateur){
+  const scale = isAmateur ? 0.25 : 1;
+  const base = isAmateur
+    ? 18 + s.wins * 1.0
+    : 22 + s.wins * 1.3 + Math.max(0, s.age - 18) * 0.6;
+
+  const card = [
+    {
+      name: randomFighterName(),
+      tag: "Tune-up",
+      rating: base * 0.7 + rand(-5, 5),
+      purseMult: 0.6 * scale, fameMult: 0.6,
+      desc: "A durable veteran on the way down. Safer, smaller purse."
+    },
+    {
+      name: randomFighterName(),
+      tag: "Even Match",
+      rating: base + rand(-8, 8),
+      purseMult: 1 * scale, fameMult: 1,
+      desc: "A fighter around your level. Real toss-up."
+    },
+    {
+      name: randomFighterName(),
+      tag: "Dangerous",
+      rating: base * 1.35 + rand(-5, 10),
+      purseMult: 1.8 * scale, fameMult: 1.6,
+      desc: "A live puncher who could really hurt you. Big payday if you win."
+    }
+  ];
+
+  if(!isAmateur && s.champion){
+    card[2] = {
+      name: randomFighterName(),
+      tag: "TITLE DEFENSE", isDefense: true,
+      rating: base * 1.4 + rand(-5, 10),
+      purseMult: 2.6, fameMult: 2,
+      desc: "Defend your belt. Lose it and you're a challenger again."
+    };
+  } else if(!isAmateur && !s.champion && s.wins >= 8 && s.fame >= 40){
+    card[2] = {
+      name: randomFighterName(),
+      tag: "TITLE ELIMINATOR", isTitle: true,
+      rating: base * 1.5 + rand(-5, 10),
+      purseMult: 3, fameMult: 2.5,
+      desc: "Win this and you fight for the belt. High risk, high reward."
+    };
+  }
+
+  return card;
+}
+
+function resolveFight(s, opp, timingBonus){
+  timingBonus = timingBonus || 0;
+  const stance = STANCES[s.stanceKey];
+  const playerScore = s.power * 0.5 + s.speed * 0.35 + s.health * 0.15 + stance.scoreBonus() + timingBonus + rand(-10, 10);
+  let damage = rand(6, 16) + ((opp.isTitle || opp.isDefense) ? 4 : 0);
+  damage = Math.max(2, Math.round((damage - s.chinBonus * 0.5) * stance.damageMult));
+  s.health -= damage;
+
+  let outcome;
+  const drawRoll = Math.random();
+  if(drawRoll < 0.06 && Math.abs(playerScore - opp.rating) < 8){
+    outcome = "draw"; s.draws += 1;
+  } else if(playerScore > opp.rating){
+    outcome = "win"; s.wins += 1;
+  } else {
+    outcome = "loss"; s.losses += 1;
+  }
+
+  const shopBonus = getShopBonuses(s);
+  const purse = Math.round((300 + s.fame * 12) * (opp.purseMult || 1) * s.weightClassPurseMult * shopBonus.purseMult + rand(0, 200));
+  const fameChange = outcome === "win"
+    ? Math.round((5 + opp.rating / 10) * (opp.fameMult || 1) * stance.fameMult)
+    : outcome === "draw" ? rand(1, 3) : -rand(2, 7);
+
+  s.money += purse;
+  s.fame += fameChange;
+
+  let titleNote = "";
+  if(opp.isTitle){
+    titleNote = outcome === "win" ? " You're the new champion!" : " The title shot slips away.";
+    if(outcome === "win") s.champion = true;
+  }
+  if(opp.isDefense){
+    if(outcome === "win"){ s.titleDefenses += 1; titleNote = " Successful title defense!"; }
+    else { s.champion = false; titleNote = " You lost your title."; }
+  }
+
+  const verbs = {
+    win: ["won by decision", "won by TKO", "won by knockout", "won a unanimous decision"],
+    loss: ["lost by decision", "were stopped late", "dropped a close split decision"],
+    draw: ["fought to a split draw", "fought to a majority draw"]
+  };
+
+  return {
+    outcome,
+    text: `vs. ${opp.name} (${opp.tag}): You ${pick(verbs[outcome])}.${titleNote}`,
+    delta: `Purse +$${purse}, Fame ${fameChange >= 0 ? "+" : ""}${fameChange}, Health -${damage}`
+  };
+}
+
+/* ---------- EVENT DATA ----------
+   Non-fight story beats. Each has an age range, text, and choices.
+   If one of these fires for the year, it replaces that year's fight card. */
+const EVENTS = [
+  {
+    id: "join-gym", minAge: 14, maxAge: 14, once: true,
+    text: "You walked into a boxing gym for the first time.",
+    choices: [
+      { label: "Train under the power coach", apply(s){ s.power += 8; return "Power +8"; } },
+      { label: "Train under the speed coach", apply(s){ s.speed += 8; return "Speed +8"; } },
+      { label: "Do a bit of everything", apply(s){ s.power += 4; s.speed += 4; return "Power +4, Speed +4"; } }
+    ]
+  },
+  {
+    id: "turn-pro", minAge: 18, maxAge: 18, once: true,
+    text: "A promoter offered to take you pro.",
+    choices: [
+      { label: "Sign with them", apply(s){ s.turnedPro = true; s.money += 500; s.fame += 3; return "Signed. Cash +$500, Fame +3"; } },
+      { label: "Negotiate a better cut first", apply(s){
+          const win = Math.random() < 0.5;
+          s.turnedPro = true;
+          if(win){ s.money += 1200; return "Better deal secured. Cash +$1200"; }
+          s.money += 300; s.fame -= 1; return "Talks dragged on. Cash +$300, Fame -1";
+        } }
+    ]
+  },
+  {
+    id: "rivalry", minAge: 26, maxAge: 26, once: true,
+    text: "A rival fighter called you out in the press for a grudge match.",
+    choices: [
+      { label: "Accept the fight", apply(s){
+          const opp = { name: randomFighterName() + " (rival)", tag: "Grudge Match", rating: 30 + s.wins * 1.3 + rand(-5,10), purseMult: 1.5, fameMult: 1.6 };
+          const r = resolveFight(s, opp);
+          return r.text + " " + r.delta;
+        } },
+      { label: "Ignore the trash talk", apply(s){ s.fame -= 2; return "Fame -2 (fans wanted the fight)"; } }
+    ]
+  },
+  {
+    id: "temptation", minAge: 30, maxAge: 30, once: true,
+    text: "Someone in your camp quietly offers you a banned substance to sharpen your edge.",
+    choices: [
+      { label: "Use it", apply(s){
+          const caught = Math.random() < 0.4;
+          if(caught){ s.fame -= 20; s.money -= 2000; return "Caught in testing. Fame -20, Cash -$2000"; }
+          s.power += 6; return "Undetected. Power +6";
+        } },
+      { label: "Refuse", apply(s){ s.fame += 2; return "Fame +2 (word gets around)"; } }
+    ]
+  },
+  {
+    id: "injury-scare", minAge: 34, maxAge: 34, once: true,
+    text: "A ringside doctor flags something concerning in your last scan.",
+    choices: [
+      { label: "Take the year to heal", apply(s){ s.health += 15; return "Health +15, no fight this year"; } },
+      { label: "Fight through it anyway", apply(s){
+          const opp = { name: randomFighterName(), tag: "Risky Bout", rating: 22 + s.wins * 1.3 + rand(-5,10), purseMult: 1, fameMult: 1 };
+          const r = resolveFight(s, opp);
+          return r.text + " " + r.delta;
+        } }
+    ]
+  },
+  {
+    id: "retirement-thoughts", minAge: 37, maxAge: 37, once: true,
+    text: "Your body is telling you the end of the road is close.",
+    choices: [
+      { label: "Retire now, on your terms", apply(s){ s.retiredEarly = true; return "You decided to hang up the gloves."; } },
+      { label: "Keep fighting", apply(s){ s.fame += 2; return "Fame +2 (fans respect the grit)"; } }
+    ]
+  },
+  {
+    id: "endorsement", minAge: 24, maxAge: 36, once: false,
+    text: "A local brand wants to sponsor you.",
+    choices: [
+      { label: "Sign the deal", apply(s){ const amt = 300 + s.fame * 10; s.money += amt; return `Cash +$${Math.round(amt)}`; } },
+      { label: "Hold out for a bigger offer", apply(s){
+          const win = Math.random() < 0.4;
+          if(win){ const amt = 800 + s.fame * 15; s.money += amt; return `Bigger deal landed. Cash +$${Math.round(amt)}`; }
+          return "No better offer came.";
+        } }
+    ]
+  }
+];
+
+/* ---------- RENDER ---------- */
+let lastRendered = { health: null, power: null, speed: null, fame: null, money: null };
+
+function flashElement(el, positive){
+  el.classList.remove("pulse-up", "pulse-down");
+  void el.offsetWidth; // force reflow so the animation can retrigger
+  el.classList.add(positive ? "pulse-up" : "pulse-down");
+}
+
+function render(){
+  document.getElementById("ageVal").textContent = state.age;
+
+  const moneyEl = document.getElementById("moneyVal");
+  moneyEl.textContent = (state.money < 0 ? "-$" : "$") + Math.abs(Math.round(state.money)).toLocaleString();
+  if(lastRendered.money !== null && state.money !== lastRendered.money){
+    flashElement(moneyEl, state.money > lastRendered.money);
+  }
+  lastRendered.money = state.money;
+
+  document.getElementById("recordVal").textContent = `${state.wins}-${state.losses}-${state.draws}`;
+
+  ["health","power","speed","fame"].forEach(stat => {
+    const v = clamp(state[stat]);
+    state[stat] = v;
+    document.getElementById("bar-"+stat).style.width = v + "%";
+    document.getElementById("bar-"+stat).classList.toggle("low", v <= 25);
+    const valEl = document.getElementById("val-"+stat);
+    valEl.textContent = v;
+    if(lastRendered[stat] !== null && v !== lastRendered[stat]){
+      flashElement(valEl, v > lastRendered[stat]);
+    }
+    lastRendered[stat] = v;
+  });
+
+  let tier = "Amateur";
+  if(state.turnedPro){
+    tier = state.champion ? "Champion" : state.fame >= 60 ? "Contender" : "Prospect";
+  }
+  const tierEl = document.getElementById("tierVal");
+  tierEl.textContent = tier + (state.champion ? ` (${state.titleDefenses} defenses)` : "");
+  tierEl.classList.toggle("is-champ", state.champion);
+
+  const seal = document.getElementById("seal");
+  seal.innerHTML = !state.turnedPro ? "AMATEUR<br>CARD" : (state.champion ? "WORLD<br>CHAMPION" : tier.toUpperCase());
+  seal.classList.toggle("champ", state.champion);
+
+  document.getElementById("portraitStrip").innerHTML =
+    buildBoxerPortraitSVG(state.trunksColor, state.glovesColor, state.weightClassKey, state.champion);
+}
+
+function logEntry(text, delta){
+  const log = document.getElementById("log");
+  const div = document.createElement("div");
+  div.className = "entry";
+  div.innerHTML = `<span class="yr">AGE ${state.age}</span>${text}` +
+    (delta ? `<span class="delta">${delta}</span>` : "");
+  log.prepend(div);
+}
+
+/* ---------- GAME FLOW ---------- */
+
+function pickStoryEvent(){
+  const pool = EVENTS.filter(e =>
+    state.age >= e.minAge && state.age <= e.maxAge &&
+    !(e.once && state.usedOnceIds.includes(e.id))
+  );
+  if(pool.length === 0) return null;
+  return pick(pool);
+}
+
+function renderChoices(choices){
+  const choicesEl = document.getElementById("choicesBox");
+  choicesEl.innerHTML = "";
+  choices.forEach(choice => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn" + (choice.gold ? " gold" : "");
+    btn.innerHTML = choice.label + (choice.tag ? `<span class="choice-tag">${choice.tag}</span>` : "");
+    btn.onclick = choice.onClick;
+    choicesEl.appendChild(btn);
+  });
+}
+
+function finishYear(){
+  document.getElementById("ageBtn").disabled = false;
+  document.getElementById("promptText").textContent = "Recorded. Press the stamp to continue.";
+  document.getElementById("choicesBox").innerHTML = "";
+  checkCareerEnd();
+}
+
+function showStoryEvent(event){
+  document.getElementById("promptText").textContent = event.text;
+  renderChoices(event.choices.map(choice => ({
+    label: choice.label,
+    onClick(){
+      const resultText = choice.apply(state);
+      if(event.once) state.usedOnceIds.push(event.id);
+      logEntry(`${event.text} — chose "${choice.label}."`, resultText);
+      render();
+      finishYear();
+    }
+  })));
+}
+
+function showTrainingPhase(isAmateur){
+  document.getElementById("promptText").textContent = "Before the fight, how do you want to train this camp?";
+  const mult = getShopBonuses(state).trainingMult;
+  renderChoices([
+    { label: "Train power", onClick(){ const g = Math.round(5 * mult); state.power += g; logEntry("Trained power this camp.", `Power +${g}`); render(); showFightCard(isAmateur); } },
+    { label: "Train speed", onClick(){ const g = Math.round(5 * mult); state.speed += g; logEntry("Trained speed this camp.", `Speed +${g}`); render(); showFightCard(isAmateur); } },
+    { label: "Focus on recovery", onClick(){ const g = Math.round(8 * mult); state.health += g; logEntry("Focused on recovery this camp.", `Health +${g}`); render(); showFightCard(isAmateur); } }
+  ]);
+}
+
+function showFightCard(isAmateur){
+  const opponents = generateOpponents(state, isAmateur);
+  document.getElementById("promptText").textContent = "Your team lined up this year's fight card. Pick your opponent.";
+
+  const choices = opponents.map(opp => ({
+    label: `${opp.tag}: ${opp.name}`,
+    tag: opp.desc,
+    gold: !!(opp.isTitle || opp.isDefense),
+    onClick(){
+      showPunchTiming(opp);
+    }
+  }));
+
+  choices.push({
+    label: "Take the year off",
+    tag: "Skip the fight and heal up, but fans grumble.",
+    onClick(){
+      state.health += 10;
+      state.fame -= 1;
+      logEntry("You sat the year out.", "Health +10, Fame -1");
+      render();
+      finishYear();
+    }
+  });
+
+  renderChoices(choices);
+}
+
+/* ---------- SOUND ----------
+   Tiny synthesized cues using the Web Audio API — no sound files needed.
+   Wrapped in try/catch since some browsers block audio before user interaction. */
+function playTone(freq, duration, type){
+  try{
+    if(!playTone.ctx) playTone.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = playTone.ctx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.16, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch(e){ /* audio unsupported or blocked, silently ignore */ }
+}
+
+/* ---------- PUNCH TIMING MINI-GAME ----------
+   A marker sweeps back and forth across a bar. Tapping THROW while it's
+   inside the gold zone adds a real bonus to your fight score — this is
+   the one moment per year where your reflexes, not just your stats,
+   decide the outcome. */
+let timingRAF = null;
+
+function showPunchTiming(opp){
+  document.getElementById("ageBtn").disabled = true;
+  document.getElementById("promptText").textContent = "Time your punch — hit THROW when the marker's in the gold zone.";
+
+  const targetCenter = rand(28, 72);
+  const targetWidth = 16;
+
+  const choicesEl = document.getElementById("choicesBox");
+  choicesEl.innerHTML = `
+    <div class="timing-track">
+      <div class="timing-target" style="left:${targetCenter - targetWidth / 2}%; width:${targetWidth}%;"></div>
+      <div class="timing-marker" id="timingMarker"></div>
+    </div>
+    <button class="choice-btn gold timing-throw" id="throwBtn">THROW!</button>
+  `;
+
+  const marker = document.getElementById("timingMarker");
+  const throwBtn = document.getElementById("throwBtn");
+  const start = performance.now();
+  const periodMs = 1300;
+
+  function loop(now){
+    const elapsed = (now - start) % periodMs;
+    const pos = 50 + 50 * Math.sin((elapsed / periodMs) * Math.PI * 2);
+    marker.style.left = pos + "%";
+    timingRAF = requestAnimationFrame(loop);
+  }
+  timingRAF = requestAnimationFrame(loop);
+
+  throwBtn.onclick = () => {
+    cancelAnimationFrame(timingRAF);
+    throwBtn.disabled = true;
+    playTone(700, 0.08, "square");
+
+    const pos = parseFloat(marker.style.left);
+    const dist = Math.abs(pos - targetCenter);
+    let bonus, label;
+    if(dist <= targetWidth / 2){ bonus = 10; label = "Perfect timing!"; }
+    else if(dist <= targetWidth){ bonus = 4; label = "Good timing."; }
+    else if(dist <= targetWidth * 1.8){ bonus = 0; label = "Decent shot."; }
+    else { bonus = -6; label = "Mistimed the punch."; }
+
+    document.getElementById("promptText").textContent = label;
+    setTimeout(() => finishFightWithBonus(opp, bonus), 550);
+  };
+}
+
+/* ============================================================
+   3D FIGHT SCENE
+   Builds two articulated fighters in Three.js and plays a scripted
+   sequence: they circle the ring, throw multi-punch combos at each
+   other, then the loser goes down and the winner's arms go up —
+   all based on the outcome resolveFight() already decided. If
+   Three.js failed to load (no network access, etc.) this degrades
+   gracefully: onComplete() just fires immediately.
+   ============================================================ */
+let fightRenderer = null, fightScene = null, fightCamera = null;
+let fightPlayerMesh = null, fightOpponentMesh = null;
+let fightAnimHandle = null;
+
+const RING_R = 1.6;
+const MIN_SEP = 1.1;
+const MAX_SEP = 2.3;
+
+/* Every punch is expressed as a delta FROM the guard pose, driven by
+   a single 0→1 "extension" value — so at ext=0 it's always exactly
+   the guard stance (no popping between poses), and at ext=1 it's
+   the punch's full reach. */
+const PUNCH_DEFS = {
+  jab:      { arm: "left",  dur: 260, apply(armObj, ext){ armObj.shoulder.rotation.x = -0.5 - 0.9 * ext; armObj.elbow.rotation.x = -1.7 + 1.5 * ext; } },
+  cross:    { arm: "right", dur: 300, apply(armObj, ext){ armObj.shoulder.rotation.x = -0.5 - 1.0 * ext; armObj.elbow.rotation.x = -1.7 + 1.6 * ext; } },
+  hook:     { arm: "right", dur: 320, apply(armObj, ext){ armObj.shoulder.rotation.z = 1.1 * ext; armObj.shoulder.rotation.x = -0.5 - 0.3 * ext; armObj.elbow.rotation.x = -1.7 + 1.0 * ext; } },
+  uppercut: { arm: "right", dur: 320, apply(armObj, ext){ armObj.shoulder.rotation.x = -0.5 - 0.9 * ext; armObj.elbow.rotation.x = -1.7 + 1.6 * ext; } }
+};
+const COMBOS = [
+  ["jab", "cross"],
+  ["jab", "jab", "cross"],
+  ["jab", "cross", "hook"],
+  ["cross", "hook"],
+  ["jab", "uppercut"],
+  ["cross", "uppercut"]
+];
+
+function ensureFightSceneInit(){
+  if(fightRenderer) return true;
+  if(typeof THREE === "undefined") return false;
+
+  try{
+    const wrap = document.getElementById("fightCanvasWrap");
+    const width = wrap.clientWidth || 380;
+    const height = Math.round(width * 0.625);
+
+    fightScene = new THREE.Scene();
+    fightCamera = new THREE.PerspectiveCamera(46, width / height, 0.1, 100);
+    fightCamera.position.set(0, 1.8, 5.0);
+    fightCamera.lookAt(0, 1, 0);
+
+    fightRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    fightRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    fightRenderer.setSize(width, height);
+    fightRenderer.setClearColor(0x0c0d10);
+    wrap.innerHTML = "";
+    wrap.appendChild(fightRenderer.domElement);
+
+    fightScene.add(new THREE.HemisphereLight(0xffffff, 0x1a1a1a, 1.1));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+    dir.position.set(2, 4, 3);
+    fightScene.add(dir);
+
+    const mat = new THREE.MeshStandardMaterial({ color: 0x7a1f2b, roughness: 0.9 });
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(2.6, 32), mat);
+    floor.rotation.x = -Math.PI / 2;
+    fightScene.add(floor);
+
+    return true;
+  } catch(e){
+    fightRenderer = null;
+    return false;
+  }
+}
+
+/* Builds one articulated fighter: two-segment arms (shoulder + elbow
+   pivots) resting in a guard stance, plus a slightly tapered torso.
+   Returns a group with leftArm/rightArm = { shoulder, elbow }. */
+function buildFighterMesh(skinHex, trunksHex, glovesHex){
+  const group = new THREE.Group();
+  const skin = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.7 });
+  const trunks = new THREE.MeshStandardMaterial({ color: trunksHex, roughness: 0.7 });
+  const gloves = new THREE.MeshStandardMaterial({ color: glovesHex, roughness: 0.5 });
+  const shorts = new THREE.MeshStandardMaterial({ color: 0x1c1f26, roughness: 0.8 });
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), skin);
+  head.position.y = 1.58;
+  group.add(head);
+
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.4, 0.32), skin);
+  chest.position.y = 1.32;
+  group.add(chest);
+
+  const waist = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.28, 0.28), skin);
+  waist.position.y = 1.02;
+  group.add(waist);
+
+  const trunksBox = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.26, 0.32), trunks);
+  trunksBox.position.y = 0.82;
+  group.add(trunksBox);
+
+  [-0.15, 0.15].forEach(x => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.8, 8), shorts);
+    leg.position.set(x, 0.4, 0);
+    group.add(leg);
+  });
+
+  function buildArm(sign){
+    const shoulder = new THREE.Object3D();
+    shoulder.position.set(sign * 0.36, 1.42, 0);
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.32, 8), skin);
+    upper.position.y = -0.16;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Object3D();
+    elbow.position.y = -0.32;
+    shoulder.add(elbow);
+
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.065, 0.3, 8), skin);
+    forearm.position.y = -0.15;
+    elbow.add(forearm);
+
+    const glove = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), gloves);
+    glove.position.y = -0.32;
+    elbow.add(glove);
+
+    group.add(shoulder);
+    return { shoulder, elbow };
+  }
+
+  group.leftArm = buildArm(-1);
+  group.rightArm = buildArm(1);
+  applyGuardPose(group);
+  return group;
+}
+
+function applyGuardPose(mesh){
+  [mesh.leftArm, mesh.rightArm].forEach(arm => {
+    arm.shoulder.rotation.set(-0.5, 0, 0);
+    arm.elbow.rotation.set(-1.7, 0, 0);
+  });
+  mesh.rotation.x = 0;
+  mesh.rotation.z = 0;
+}
+
+function hexToInt(hex){ return parseInt(String(hex).replace("#", ""), 16); }
+
+/* Picks a new footwork target for each fighter around the ring
+   center, keeping their separation within a fightable range. */
+function pickFootworkTargets(){
+  let a1, a2, r1, r2, dx, dz;
+  for(let tries = 0; tries < 8; tries++){
+    a1 = Math.random() * Math.PI * 2;
+    a2 = a1 + Math.PI * (0.6 + Math.random() * 0.8) * (Math.random() < 0.5 ? 1 : -1);
+    r1 = RING_R * (0.3 + Math.random() * 0.5);
+    r2 = RING_R * (0.3 + Math.random() * 0.5);
+    const p1 = { x: Math.sin(a1) * r1, z: Math.cos(a1) * r1 };
+    const p2 = { x: Math.sin(a2) * r2, z: Math.cos(a2) * r2 };
+    dx = p2.x - p1.x; dz = p2.z - p1.z;
+    const sep = Math.sqrt(dx * dx + dz * dz);
+    if(sep >= MIN_SEP && sep <= MAX_SEP) return { player: p1, opponent: p2 };
+  }
+  return { player: { x: -0.9, z: 0 }, opponent: { x: 0.9, z: 0 } };
+}
+
+function faceToward(mesh, targetX, targetZ){
+  const dx = targetX - mesh.position.x;
+  const dz = targetZ - mesh.position.z;
+  if(Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) mesh.rotation.y = Math.atan2(dx, dz);
+}
+
+/* Builds the exchange timeline: alternating footwork beats and combo
+   beats. Each combo beat carries its own list of {def, start, end}
+   punch windows (ms, relative to the beat's own start). */
+function buildComboBeat(fighterKey){
+  const combo = pick(COMBOS);
+  let cursor = 0;
+  const punches = combo.map(key => {
+    const def = PUNCH_DEFS[key];
+    const start = cursor;
+    const end = cursor + def.dur;
+    cursor = end + 90;
+    return { key, def, start, end, fired: false };
+  });
+  return { type: "combo", fighter: fighterKey, duration: cursor, punches };
+}
+
+function buildFightTimeline(){
+  const beats = [];
+  let toggle = Math.random() < 0.5 ? "player" : "opponent";
+  for(let i = 0; i < 4; i++){
+    beats.push({ type: "move", duration: rand(450, 700), targets: pickFootworkTargets() });
+    beats.push(buildComboBeat(toggle));
+    toggle = toggle === "player" ? "opponent" : "player";
+  }
+  beats.push({ type: "move", duration: 400, targets: pickFootworkTargets() });
+
+  let t = 0;
+  beats.forEach(b => { b.start = t; t += b.duration; b.end = t; });
+  return { beats, totalDuration: t };
+}
+
+/* Runs the scripted fight, then calls onComplete(). Tapping the
+   overlay skips straight to the end. */
+function playFightScene(opp, result, onComplete){
+  const overlay = document.getElementById("fightScene");
+  const ready = ensureFightSceneInit();
+
+  if(!ready){
+    onComplete();
+    return;
+  }
+
+  document.getElementById("fightNameLeft").textContent =
+    (state.nickname ? `"${state.nickname}" ` : "") + state.name;
+  document.getElementById("fightNameRight").textContent = opp.name.replace(/"/g, "");
+  document.getElementById("fightResultText").textContent = "";
+  overlay.classList.remove("hidden");
+
+  [fightPlayerMesh, fightOpponentMesh].forEach(mesh => {
+    if(!mesh) return;
+    mesh.traverse(obj => {
+      if(obj.geometry) obj.geometry.dispose();
+      if(obj.material) obj.material.dispose();
+    });
+    fightScene.remove(mesh);
+  });
+
+  fightPlayerMesh = buildFighterMesh(0x454d5e, hexToInt(state.trunksColor), hexToInt(state.glovesColor));
+  fightOpponentMesh = buildFighterMesh(0x454d5e, 0x2c4a6e, 0xdadde3);
+  fightPlayerMesh.position.set(-0.9, 0, 0);
+  fightOpponentMesh.position.set(0.9, 0, 0);
+  fightScene.add(fightPlayerMesh);
+  fightScene.add(fightOpponentMesh);
+
+  const timeline = buildFightTimeline();
+  let moveFrom = null; // captured positions at the start of the current move beat
+  let lastBeatIndex = -1;
+
+  const start = performance.now();
+  const resolveMs = 1300;
+  const totalMs = timeline.totalDuration + resolveMs;
+  let finished = false;
+
+  function finish(){
+    if(finished) return;
+    finished = true;
+    cancelAnimationFrame(fightAnimHandle);
+    overlay.classList.add("hidden");
+    overlay.removeEventListener("click", finish);
+    onComplete();
+  }
+  overlay.addEventListener("click", finish);
+
+  function currentBeat(elapsed){
+    for(let i = 0; i < timeline.beats.length; i++){
+      if(elapsed < timeline.beats[i].end) return { beat: timeline.beats[i], index: i };
+    }
+    return { beat: timeline.beats[timeline.beats.length - 1], index: timeline.beats.length - 1 };
+  }
+
+  function updateCamera(){
+    const midX = (fightPlayerMesh.position.x + fightOpponentMesh.position.x) / 2;
+    const midZ = (fightPlayerMesh.position.z + fightOpponentMesh.position.z) / 2;
+    const sep = fightPlayerMesh.position.distanceTo(fightOpponentMesh.position);
+    const zoom = Math.max(0.85, Math.min(1.25, sep / 1.7));
+    const desired = new THREE.Vector3(midX * 0.6, 1.8, midZ * 0.6 + 4.0 * zoom);
+    fightCamera.position.lerp(desired, 0.05);
+    fightCamera.lookAt(midX * 0.4, 1.05, midZ * 0.4);
+  }
+
+  function loop(now){
+    const elapsed = now - start;
+
+    if(elapsed < timeline.totalDuration){
+      const { beat, index } = currentBeat(elapsed);
+      const localT = elapsed - beat.start;
+
+      if(index !== lastBeatIndex){
+        lastBeatIndex = index;
+        if(beat.type === "move"){
+          moveFrom = {
+            player: { x: fightPlayerMesh.position.x, z: fightPlayerMesh.position.z },
+            opponent: { x: fightOpponentMesh.position.x, z: fightOpponentMesh.position.z }
+          };
+        }
+      }
+
+      if(beat.type === "move"){
+        fightPlayerMesh.rotation.x = 0;
+        fightOpponentMesh.rotation.x = 0;
+        const p = Math.min(1, localT / beat.duration);
+        const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        fightPlayerMesh.position.x = moveFrom.player.x + (beat.targets.player.x - moveFrom.player.x) * ease;
+        fightPlayerMesh.position.z = moveFrom.player.z + (beat.targets.player.z - moveFrom.player.z) * ease;
+        fightOpponentMesh.position.x = moveFrom.opponent.x + (beat.targets.opponent.x - moveFrom.opponent.x) * ease;
+        fightOpponentMesh.position.z = moveFrom.opponent.z + (beat.targets.opponent.z - moveFrom.opponent.z) * ease;
+      } else {
+        const attacker = beat.fighter === "player" ? fightPlayerMesh : fightOpponentMesh;
+        const defender = beat.fighter === "player" ? fightOpponentMesh : fightPlayerMesh;
+        attacker.rotation.x = 0;
+        let incomingExt = 0;
+
+        beat.punches.forEach(p => {
+          let ext = 0;
+          if(localT >= p.start && localT <= p.end){
+            const pp = (localT - p.start) / (p.end - p.start);
+            ext = pp < 0.45 ? pp / 0.45 : 1 - (pp - 0.45) / 0.55;
+            ext = Math.max(0, Math.min(1, ext));
+            if(ext > 0.85 && !p.fired){ p.fired = true; playTone(360, 0.06, "square"); }
+          }
+          if(ext > incomingExt) incomingExt = ext;
+          const armObj = attacker[p.def.arm === "left" ? "leftArm" : "rightArm"];
+          p.def.apply(armObj, ext);
+        });
+
+        defender.rotation.x = incomingExt * 0.08;
+      }
+
+      faceToward(fightPlayerMesh, fightOpponentMesh.position.x, fightOpponentMesh.position.z);
+      faceToward(fightOpponentMesh, fightPlayerMesh.position.x, fightPlayerMesh.position.z);
+
+      const bob = Math.sin(elapsed / 130) * 0.025;
+      fightPlayerMesh.position.y = bob;
+      fightOpponentMesh.position.y = -bob;
+
+      document.getElementById("fightResultText").textContent = "";
+    } else {
+      const p = Math.min(1, (elapsed - timeline.totalDuration) / resolveMs);
+      const winnerMesh = result.outcome === "loss" ? fightOpponentMesh : fightPlayerMesh;
+      const loserMesh = result.outcome === "loss" ? fightPlayerMesh : fightOpponentMesh;
+
+      if(result.outcome === "draw"){
+        [fightPlayerMesh, fightOpponentMesh].forEach(m => {
+          m.leftArm.shoulder.rotation.x = -0.5 - 1.5 * p;
+          m.leftArm.elbow.rotation.x = -1.7 + 1.5 * p;
+        });
+        document.getElementById("fightResultText").textContent = p > 0.5 ? "DRAW" : "";
+      } else {
+        [winnerMesh.leftArm, winnerMesh.rightArm].forEach(arm => {
+          arm.shoulder.rotation.x = -0.5 - 2.6 * p;
+          arm.elbow.rotation.x = -1.7 + 1.7 * p;
+        });
+        const fallSign = loserMesh.position.x < winnerMesh.position.x ? 1 : -1;
+        loserMesh.rotation.z = fallSign * (Math.PI / 2.1) * p;
+        if(p > 0.5){
+          document.getElementById("fightResultText").textContent =
+            result.outcome === "loss" ? "OPPONENT WINS" : "YOU WIN";
+        }
+      }
+    }
+
+    updateCamera();
+    fightRenderer.render(fightScene, fightCamera);
+
+    if(elapsed >= totalMs){
+      setTimeout(finish, 500);
+      return;
+    }
+    fightAnimHandle = requestAnimationFrame(loop);
+  }
+  fightAnimHandle = requestAnimationFrame(loop);
+}
+
+function finishFightWithBonus(opp, bonus){
+  const r = resolveFight(state, opp, bonus);
+  playFightScene(opp, r, () => {
+    playTone(r.outcome === "win" ? 880 : r.outcome === "draw" ? 500 : 220, 0.28, r.outcome === "win" ? "triangle" : "sine");
+    logEntry(r.text, r.delta);
+    render();
+    finishYear();
+  });
+}
+
+/* ---------- SHOP ---------- */
+function renderShop(){
+  if(!state) return;
+  document.getElementById("shopMoneyVal").textContent = "$" + Math.max(0, Math.round(state.money)).toLocaleString();
+
+  const container = document.getElementById("shopCategories");
+  container.innerHTML = "";
+
+  if(state.ownedGym === "owner"){
+    const rosterBlock = document.createElement("div");
+    rosterBlock.className = "shop-category";
+    rosterBlock.innerHTML = `<div class="shop-cat-title">🥊 My Gym Roster (${state.roster.length}/${ROSTER_MAX})</div>`;
+
+    const rosterList = document.createElement("div");
+    rosterList.className = "shop-tier-list";
+
+    if(state.roster.length === 0){
+      const row = document.createElement("div");
+      row.className = "shop-tier";
+      row.innerHTML = `
+        <div class="shop-tier-info">
+          <div class="shop-tier-name">No fighters signed yet</div>
+          <div class="shop-tier-desc">Prospects sign to your gym over time — check back after your next few birthdays.</div>
+        </div>`;
+      rosterList.appendChild(row);
+    } else {
+      state.roster.forEach(f => {
+        const yearlyCut = Math.round(f.potential * 6);
+        const row = document.createElement("div");
+        row.className = "shop-tier owned";
+        row.innerHTML = `
+          <div class="shop-tier-info">
+            <div class="shop-tier-name">${f.name}</div>
+            <div class="shop-tier-desc">Potential ${f.potential} · Signed ${f.years} yr${f.years === 1 ? "" : "s"} · ~$${yearlyCut.toLocaleString()}/yr</div>
+          </div>`;
+        rosterList.appendChild(row);
+      });
+    }
+
+    rosterBlock.appendChild(rosterList);
+    container.appendChild(rosterBlock);
+  }
+
+  Object.keys(SHOP_ITEMS).forEach(catKey => {
+    const cat = SHOP_ITEMS[catKey];
+    const ownedTierKey = state[OWNED_FIELD[catKey]];
+
+    const block = document.createElement("div");
+    block.className = "shop-category";
+    block.innerHTML = `<div class="shop-cat-title">${cat.icon} ${cat.label}</div>`;
+
+    const list = document.createElement("div");
+    list.className = "shop-tier-list";
+
+    cat.tiers.forEach(tier => {
+      const isOwned = tier.key === ownedTierKey;
+      const row = document.createElement("div");
+      row.className = "shop-tier" + (isOwned ? " owned" : "");
+
+      let actionHtml = "";
+      if(isOwned){
+        actionHtml = `<span class="shop-owned-badge">OWNED</span>`;
+      } else if(tier.price > 0){
+        actionHtml = `<button type="button" class="shop-buy-btn" data-cat="${catKey}" data-tier="${tier.key}" ${state.money < tier.price ? "disabled" : ""}>$${tier.price.toLocaleString()}</button>`;
+      }
+
+      let iconHtml = "";
+      if(catKey === "car") iconHtml = `<div class="shop-tier-icon">${buildCarIconSVG(tier.key)}</div>`;
+      else if(catKey === "house") iconHtml = `<div class="shop-tier-icon">${buildHouseIconSVG(tier.key)}</div>`;
+
+      row.innerHTML = `
+        ${iconHtml}
+        <div class="shop-tier-info">
+          <div class="shop-tier-name">${tier.label}</div>
+          <div class="shop-tier-desc">${tier.desc}</div>
+        </div>
+        <div class="shop-tier-action">${actionHtml}</div>
+      `;
+      list.appendChild(row);
+    });
+
+    block.appendChild(list);
+    container.appendChild(block);
+  });
+}
+
+function buyItem(catKey, tierKey){
+  const tier = SHOP_ITEMS[catKey].tiers.find(t => t.key === tierKey);
+  if(!tier || tier.price <= 0 || state.money < tier.price) return;
+
+  state.money -= tier.price;
+  state[OWNED_FIELD[catKey]] = tierKey;
+  if(tier.fameInstant) state.fame += tier.fameInstant;
+
+  logEntry(`Purchased: ${tier.label}.`, `-$${tier.price.toLocaleString()}` + (tier.fameInstant ? `, Fame +${tier.fameInstant}` : ""));
+  playTone(600, 0.1, "square");
+  render();
+  renderFinanceScreen();
+}
+
+/* ---------- Finances hub: tabs + the four new panels ---------- */
+let activeFinanceTab = "shop";
+
+function switchFinanceTab(tab){
+  activeFinanceTab = tab;
+  document.querySelectorAll(".finance-tab").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
+  ["shop", "invest", "ventures", "social", "sponsors"].forEach(t => {
+    document.getElementById("panel-" + t).classList.toggle("hidden", t !== tab);
+  });
+  renderFinanceScreen();
+}
+
+function renderFinanceScreen(){
+  if(!state) return;
+  document.getElementById("shopMoneyVal").textContent = "$" + Math.max(0, Math.round(state.money)).toLocaleString();
+
+  if(activeFinanceTab === "shop") renderShop();
+  else if(activeFinanceTab === "invest") renderInvestTab();
+  else if(activeFinanceTab === "ventures") renderVenturesTab();
+  else if(activeFinanceTab === "social") renderSocialTab();
+  else if(activeFinanceTab === "sponsors") renderSponsorsTab();
+}
+
+function investMoney(amount){
+  const actual = amount === "all" ? state.money : Math.min(amount, state.money);
+  if(actual <= 0) return;
+  state.money -= actual;
+  state.investment += actual;
+  logEntry(`Moved cash into your investment portfolio.`, `-$${Math.round(actual).toLocaleString()}`);
+  render();
+  renderFinanceScreen();
+}
+
+function withdrawInvestment(){
+  if(state.investment <= 0) return;
+  const amount = state.investment;
+  state.investment = 0;
+  state.money += amount;
+  logEntry("Withdrew your full investment portfolio.", `Cash +$${amount.toLocaleString()}`);
+  render();
+  renderFinanceScreen();
+}
+
+function renderInvestTab(){
+  const el = document.getElementById("investPanel");
+  const changeClass = state.lastInvestChangePct !== null && state.lastInvestChangePct < 0 ? " negative" : "";
+  el.innerHTML = `
+    <div class="finance-note">Money in your portfolio grows or shrinks a random amount every year — higher risk, no guaranteed floor.</div>
+    <div class="finance-stat-row">
+      <span class="finance-stat-label">Portfolio Value</span>
+      <span class="finance-stat-value${changeClass}">$${Math.round(state.investment).toLocaleString()}</span>
+    </div>
+    ${state.lastInvestChangePct !== null ? `<div class="finance-note">Last year's change: ${state.lastInvestChangePct >= 0 ? "+" : ""}${state.lastInvestChangePct}%</div>` : ""}
+    <div class="finance-btn-row">
+      <button type="button" class="finance-btn" data-invest="500" ${state.money < 500 ? "disabled" : ""}>Invest $500</button>
+      <button type="button" class="finance-btn" data-invest="1000" ${state.money < 1000 ? "disabled" : ""}>Invest $1,000</button>
+      <button type="button" class="finance-btn" data-invest="5000" ${state.money < 5000 ? "disabled" : ""}>Invest $5,000</button>
+      <button type="button" class="finance-btn primary" data-invest="all" ${state.money <= 0 ? "disabled" : ""}>Invest All</button>
+    </div>
+    <div class="finance-btn-row">
+      <button type="button" class="finance-btn" id="withdrawBtn" ${state.investment <= 0 ? "disabled" : ""}>Withdraw All</button>
+    </div>
+  `;
+}
+
+function buyVenture(key){
+  const v = VENTURES[key];
+  if(!v || state.ventures[key] || state.money < v.price) return;
+  state.money -= v.price;
+  state.ventures[key] = true;
+  logEntry(`Purchased venture: ${v.label}.`, `-$${v.price.toLocaleString()}`);
+  playTone(600, 0.1, "square");
+  render();
+  renderFinanceScreen();
+}
+
+function renderVenturesTab(){
+  const el = document.getElementById("venturesPanel");
+  el.innerHTML = `<div class="finance-note">One-time purchases that pay out passive income every year from then on.</div>`;
+
+  const list = document.createElement("div");
+  list.className = "shop-tier-list";
+  Object.keys(VENTURES).forEach(key => {
+    const v = VENTURES[key];
+    const owned = state.ventures[key];
+    const row = document.createElement("div");
+    row.className = "shop-tier" + (owned ? " owned" : "");
+    row.innerHTML = `
+      <div class="shop-tier-info">
+        <div class="shop-tier-name">${v.label}</div>
+        <div class="shop-tier-desc">${v.desc} (~$${v.incomeMin.toLocaleString()}–$${v.incomeMax.toLocaleString()}/yr)</div>
+      </div>
+      <div class="shop-tier-action">
+        ${owned ? `<span class="shop-owned-badge">OWNED</span>` : `<button type="button" class="shop-buy-btn" data-venture="${key}" ${state.money < v.price ? "disabled" : ""}>$${v.price.toLocaleString()}</button>`}
+      </div>
+    `;
+    list.appendChild(row);
+  });
+  el.appendChild(list);
+}
+
+function renderSocialTab(){
+  const el = document.getElementById("socialPanel");
+  el.innerHTML = `<div class="finance-note">Grow each platform once a year, then collect passive ad revenue and deals annually based on your following.</div>`;
+
+  Object.keys(SOCIAL_PLATFORMS).forEach(key => {
+    const platform = SOCIAL_PLATFORMS[key];
+    const p = state.social[key];
+    const estIncome = Math.round(p.followers * platform.rate);
+    const card = document.createElement("div");
+    card.className = "social-card";
+    card.innerHTML = `
+      <div class="social-card-top">
+        <span class="social-card-name">${platform.icon} ${platform.label}</span>
+        <span class="social-card-followers">${p.followers.toLocaleString()} ${platform.followerNoun}</span>
+      </div>
+      <div class="social-card-income">Estimated ~$${estIncome.toLocaleString()}/year in passive income</div>
+      <button type="button" class="finance-btn primary" data-social="${key}" ${p.postedThisYear ? "disabled" : ""}>
+        ${p.postedThisYear ? "Already posted this year" : platform.actionLabel}
+      </button>
+    `;
+    el.appendChild(card);
+  });
+}
+
+function renderSponsorsTab(){
+  const el = document.getElementById("sponsorsPanel");
+  const atMax = state.sponsorships.length >= SPONSOR_MAX;
+  el.innerHTML = `
+    <div class="finance-note">Seek a sponsor once a year. Fame improves your odds of landing a deal. Up to ${SPONSOR_MAX} active deals at once.</div>
+    <div class="finance-btn-row">
+      <button type="button" class="finance-btn primary" id="seekSponsorBtn" ${state.sponsorSoughtThisYear || atMax ? "disabled" : ""}>
+        ${atMax ? "Sponsor roster full" : state.sponsorSoughtThisYear ? "Already sought this year" : "Seek a Sponsorship"}
+      </button>
+    </div>
+  `;
+
+  if(state.sponsorships.length === 0){
+    el.innerHTML += `<div class="finance-note">No active sponsorships yet.</div>`;
+    return;
+  }
+
+  state.sponsorships.forEach(deal => {
+    const row = document.createElement("div");
+    row.className = "sponsor-row";
+    row.innerHTML = `
+      <div>
+        <div class="sponsor-name">${deal.brand}</div>
+        <div class="sponsor-meta">${deal.yearsLeft} year${deal.yearsLeft === 1 ? "" : "s"} remaining</div>
+      </div>
+      <div class="sponsor-amount">$${deal.yearlyAmount.toLocaleString()}/yr</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function ageUp(){
+  if(!state || !state.alive) return;
+  document.getElementById("ageBtn").disabled = true;
+
+  state.age += 1;
+  const bonuses = getShopBonuses(state);
+  const decay = Math.max(0, (state.age > 32 ? 3 : 1) - bonuses.healthDecayReduction);
+  state.health -= decay;
+  state.health += bonuses.healthRegen;
+  state.fame += bonuses.fameYear;
+  if(bonuses.ownsGym) runGymRoster(state);
+  runInvestment(state);
+  runVentures(state);
+  runSocialIncome(state);
+  runSponsorships(state);
+  render();
+
+  const story = pickStoryEvent();
+  if(story){
+    showStoryEvent(story);
+    return;
+  }
+
+  if(state.age < 15){
+    document.getElementById("promptText").textContent = "Still too young to fight.";
+    finishYear();
+    return;
+  }
+
+  showTrainingPhase(state.age < 18);
+}
+
+function checkCareerEnd(){
+  let cause = null;
+  if(state.health <= 0) cause = "Career-ending injury.";
+  else if(state.retiredEarly) cause = "Voluntary retirement.";
+  else if(state.age >= 40) cause = "Mandatory retirement age.";
+
+  if(cause){
+    state.alive = false;
+    endGame(cause);
+  }
+}
+
+function endGame(cause){
+  document.getElementById("ageBtn").disabled = true;
+  document.getElementById("activeEventBox").classList.add("hidden");
+  document.getElementById("closedBox").classList.add("show");
+
+  const name = (state.nickname ? `"${state.nickname}" ` : "") + (state.name || "This fighter");
+  const totalFights = state.wins + state.losses + state.draws;
+  const winRate = totalFights > 0 ? Math.round((state.wins / totalFights) * 100) : 0;
+  const hof = (state.champion || state.titleDefenses > 0) && winRate >= 60;
+
+  document.getElementById("epitaphText").textContent =
+    `${name} of ${state.hometown} retired at age ${state.age} with a record of ${state.wins}-${state.losses}-${state.draws}` +
+    (state.champion ? ` as reigning ${state.weightClassLabel} champion (${state.titleDefenses} defenses).` : ".") +
+    ` Reason: ${cause} Career earnings: $${Math.round(state.money).toLocaleString()}. ` +
+    (hof ? "Inducted into the Hall of Fame." : "Not enshrined in the Hall of Fame.");
+}
+
+/* ---------- LOADING SCREEN ----------
+   Purely cosmetic delay while the "commission" processes your file.
+   Advances a progress bar, cycles through status lines, then fades
+   into the character creation screen. Tapping anywhere skips it. */
+function runLoadingScreen(){
+  const screen = document.getElementById("loadingScreen");
+  const fill = document.getElementById("loadingFill");
+  const status = document.getElementById("loadingStatus");
+  const messages = [
+    "Pulling your file...",
+    "Weighing in...",
+    "Inking the seal...",
+    "Notifying the commission...",
+    "Opening the ledger..."
+  ];
+
+  const totalMs = 2200 + rand(0, 400);
+  const stepMs = 40;
+  const totalSteps = totalMs / stepMs;
+  let step = 0;
+  let done = false;
+
+  const timer = setInterval(() => {
+    step += 1;
+    const pct = Math.min(100, Math.round((step / totalSteps) * 100));
+    fill.style.width = pct + "%";
+    status.textContent = messages[Math.min(messages.length - 1, Math.floor((pct / 100) * messages.length))];
+    if(pct >= 100) finish();
+  }, stepMs);
+
+  function finish(){
+    if(done) return;
+    done = true;
+    clearInterval(timer);
+    screen.classList.add("fade-out");
+    setTimeout(() => {
+      screen.classList.add("hidden");
+      document.getElementById("creationScreen").classList.remove("hidden");
+    }, 400);
+  }
+
+  screen.addEventListener("click", finish);
+}
+
+/* ---------- INIT ---------- */
+document.getElementById("restartBtn").addEventListener("click", showCreationScreen);
+document.getElementById("ageBtn").addEventListener("click", ageUp);
+
+document.getElementById("financeBtn").addEventListener("click", () => {
+  renderFinanceScreen();
+  document.getElementById("financeScreen").classList.remove("hidden");
+});
+document.getElementById("closeFinanceBtn").addEventListener("click", () => {
+  document.getElementById("financeScreen").classList.add("hidden");
+});
+
+document.getElementById("financeTabs").addEventListener("click", (e) => {
+  if(e.target.classList.contains("finance-tab")) switchFinanceTab(e.target.dataset.tab);
+});
+document.getElementById("financeScreen").addEventListener("click", (e) => {
+  if(e.target.id === "financeScreen"){
+    document.getElementById("financeScreen").classList.add("hidden");
+    return;
+  }
+  const t = e.target;
+  if(t.classList.contains("shop-buy-btn") && t.dataset.cat){
+    buyItem(t.dataset.cat, t.dataset.tier);
+  } else if(t.classList.contains("shop-buy-btn") && t.dataset.venture){
+    buyVenture(t.dataset.venture);
+  } else if(t.dataset.invest){
+    const v = t.dataset.invest === "all" ? "all" : Number(t.dataset.invest);
+    investMoney(v);
+  } else if(t.id === "withdrawBtn"){
+    withdrawInvestment();
+  } else if(t.dataset.social){
+    doSocialAction(t.dataset.social);
+  } else if(t.id === "seekSponsorBtn"){
+    seekSponsorship();
+  }
+});
+
+initCreationScreen();
+runLoadingScreen();
+</script>
+
+</body>
+</html>
